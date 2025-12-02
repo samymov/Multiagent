@@ -47,11 +47,11 @@ output "setup_instructions" {
        uv run run_full_test.py
     
     3. Monitor progress in CloudWatch Logs:
-       - /aws/lambda/alex-planner
-       - /aws/lambda/alex-tagger
-       - /aws/lambda/alex-reporter
-       - /aws/lambda/alex-charter
-       - /aws/lambda/alex-retirement
+       - /aws/lambda/samy-planner
+       - /aws/lambda/samy-tagger
+       - /aws/lambda/samy-reporter
+       - /aws/lambda/samy-charter
+       - /aws/lambda/samy-retirement
     
     Bedrock Model: ${var.bedrock_model_id}
     Region: ${var.bedrock_region}

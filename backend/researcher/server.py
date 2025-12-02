@@ -1,5 +1,5 @@
 """
-Alex Researcher Service - Investment Advice Agent
+Samy Researcher Service - Investment Advice Agent
 """
 
 import os
@@ -24,7 +24,7 @@ from tools import ingest_financial_document
 # Load environment
 load_dotenv(override=True)
 
-app = FastAPI(title="Alex Researcher Service")
+app = FastAPI(title="Samy Researcher Service")
 
 
 # Request model
@@ -41,27 +41,22 @@ async def run_research_agent(topic: str = None) -> str:
     else:
         query = DEFAULT_RESEARCH_PROMPT
 
-    # Please override these variables with the region you are using
-    # Other choices: us-west-2 (for OpenAI OSS models) and eu-central-1
+    # Using us-east-1 region for all AWS services
     REGION = "us-east-1"
     os.environ["AWS_REGION_NAME"] = REGION  # LiteLLM's preferred variable
     os.environ["AWS_REGION"] = REGION  # Boto3 standard
     os.environ["AWS_DEFAULT_REGION"] = REGION  # Fallback
 
-    # Please override this variable with the model you are using
-    # Common choices: bedrock/eu.amazon.nova-pro-v1:0 for EU and bedrock/us.amazon.nova-pro-v1:0 for US
-    # or bedrock/amazon.nova-pro-v1:0 if you are not using inference profiles
-    # bedrock/openai.gpt-oss-120b-1:0 for OpenAI OSS models
-    # bedrock/converse/us.anthropic.claude-sonnet-4-20250514-v1:0 for Claude Sonnet 4
-    # NOTE that nova-pro is needed to support tools and MCP servers; nova-lite is not enough - thank you Yuelin L.!
-    MODEL = "bedrock/us.amazon.nova-pro-v1:0"
+    # Using amazon.nova-pro-v1:0 (without us. prefix) to ensure us-east-1 region is used
+    # NOTE that nova-pro is needed to support tools and MCP servers; nova-lite is not enough
+    MODEL = "bedrock/amazon.nova-pro-v1:0"
     model = LitellmModel(model=MODEL)
 
     # Create and run the agent with MCP server
     with trace("Researcher"):
         async with create_playwright_mcp_server(timeout_seconds=60) as playwright_mcp:
             agent = Agent(
-                name="Alex Investment Researcher",
+                name="Samy Investment Researcher",
                 instructions=get_agent_instructions(),
                 model=model,
                 tools=[ingest_financial_document],
@@ -77,7 +72,7 @@ async def run_research_agent(topic: str = None) -> str:
 async def root():
     """Health check endpoint."""
     return {
-        "service": "Alex Researcher",
+        "service": "Samy Researcher",
         "status": "healthy",
         "timestamp": datetime.now(UTC).isoformat(),
     }
@@ -140,9 +135,9 @@ async def health():
     }
 
     return {
-        "service": "Alex Researcher",
+        "service": "Samy Researcher",
         "status": "healthy",
-        "alex_api_configured": bool(os.getenv("ALEX_API_ENDPOINT") and os.getenv("ALEX_API_KEY")),
+        "Samy_api_configured": bool(os.getenv("Samy_API_ENDPOINT") and os.getenv("Samy_API_KEY")),
         "timestamp": datetime.now(UTC).isoformat(),
         "debug_container": container_indicators,
         "aws_region": os.environ.get("AWS_DEFAULT_REGION", "not set"),
@@ -165,12 +160,12 @@ async def test_bedrock():
         session = boto3.Session()
         actual_region = session.region_name
 
-        # Try to create Bedrock client explicitly in us-west-2
-        client = boto3.client("bedrock-runtime", region_name="us-west-2")
+        # Try to create Bedrock client explicitly in us-east-1
+        client = boto3.client("bedrock-runtime", region_name="us-east-1")
 
         # Debug: Try to list models to verify connection
         try:
-            bedrock_client = boto3.client("bedrock", region_name="us-west-2")
+            bedrock_client = boto3.client("bedrock", region_name="us-east-1")
             models = bedrock_client.list_foundation_models()
             openai_models = [
                 m["modelId"] for m in models["modelSummaries"] if "openai" in m["modelId"].lower()

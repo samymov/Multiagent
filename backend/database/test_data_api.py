@@ -19,6 +19,14 @@ def get_current_region():
     session = boto3.Session()
     return session.region_name or os.getenv('DEFAULT_AWS_REGION', 'us-east-1')
 
+def extract_region_from_arn(arn):
+    """Extract AWS region from an ARN"""
+    # ARN format: arn:aws:service:region:account:resource
+    parts = arn.split(':')
+    if len(parts) >= 4:
+        return parts[3]
+    return None
+
 def get_cluster_details(region):
     """Get Aurora cluster ARN and secret ARN from environment variables or verify they exist"""
     
@@ -28,6 +36,12 @@ def get_cluster_details(region):
     
     if cluster_arn and secret_arn:
         print(f"📋 Using configuration from .env file")
+        
+        # Extract region from cluster ARN if available
+        cluster_region = extract_region_from_arn(cluster_arn)
+        if cluster_region:
+            region = cluster_region
+            print(f"📍 Using region from cluster ARN: {region}")
         
         # Verify the cluster exists and Data API is enabled
         rds_client = boto3.client('rds', region_name=region)
@@ -41,17 +55,17 @@ def get_cluster_details(region):
                 cluster = response['DBClusters'][0]
                 if not cluster.get('HttpEndpointEnabled', False):
                     print("❌ Data API is not enabled on the Aurora cluster")
-                    print("💡 Run: aws rds modify-db-cluster --db-cluster-identifier alex-aurora-cluster --enable-http-endpoint --apply-immediately")
-                    return None, None
+                    print("💡 Run: aws rds modify-db-cluster --db-cluster-identifier samy-aurora-cluster --enable-http-endpoint --apply-immediately")
+                    return None, None, region
             else:
                 print(f"❌ Aurora cluster '{cluster_id}' not found")
-                return None, None
+                return None, None, region
                 
         except ClientError as e:
             print(f"⚠️  Could not verify cluster status: {e}")
             # Continue anyway - the cluster might exist but we can't describe it
         
-        return cluster_arn, secret_arn
+        return cluster_arn, secret_arn, region
     
     # Fallback to auto-discovery if not in .env
     print("⚠️  AURORA_CLUSTER_ARN or AURORA_SECRET_ARN not found in .env file")
@@ -66,34 +80,42 @@ def get_cluster_details(region):
     try:
         # Get cluster ARN
         response = rds_client.describe_db_clusters(
-            DBClusterIdentifier='alex-aurora-cluster'
+            DBClusterIdentifier='samy-aurora-cluster'
         )
         
         if not response['DBClusters']:
-            print("❌ Aurora cluster 'alex-aurora-cluster' not found")
-            return None, None
+            print("❌ Aurora cluster 'samy-aurora-cluster' not found")
+            return None, None, region
         
         cluster = response['DBClusters'][0]
         cluster_arn = cluster['DBClusterArn']
         
+        # Extract region from cluster ARN
+        cluster_region = extract_region_from_arn(cluster_arn)
+        if cluster_region:
+            region = cluster_region
+            # Recreate clients with correct region
+            rds_client = boto3.client('rds', region_name=region)
+            secrets_client = boto3.client('secretsmanager', region_name=region)
+        
         # Check if Data API is enabled
         if not cluster.get('HttpEndpointEnabled', False):
             print("❌ Data API is not enabled on the Aurora cluster")
-            print("💡 Run: aws rds modify-db-cluster --db-cluster-identifier alex-aurora-cluster --enable-http-endpoint --apply-immediately")
-            return None, None
+            print("💡 Run: aws rds modify-db-cluster --db-cluster-identifier samy-aurora-cluster --enable-http-endpoint --apply-immediately")
+            return None, None, region
         
-        # Find the most recently created aurora secret for alex
+        # Find the most recently created aurora secret for Samy
         secrets = secrets_client.list_secrets()
         aurora_secrets = []
         
         for secret in secrets['SecretList']:
-            if 'aurora' in secret['Name'].lower() and 'alex' in secret['Name'].lower():
+            if 'aurora' in secret['Name'].lower() and 'samy' in secret['Name'].lower():
                 aurora_secrets.append(secret)
         
         if not aurora_secrets:
             print("❌ Could not find Aurora credentials in Secrets Manager")
             print("💡 Look for a secret containing 'aurora' in the name")
-            return None, None
+            return None, None, region
         
         # Sort by creation date and pick the most recent
         aurora_secrets.sort(key=lambda x: x.get('CreatedDate', ''), reverse=True)
@@ -103,11 +125,11 @@ def get_cluster_details(region):
         print(f"AURORA_CLUSTER_ARN={cluster_arn}")
         print(f"AURORA_SECRET_ARN={secret_arn}")
         
-        return cluster_arn, secret_arn
+        return cluster_arn, secret_arn, region
         
     except ClientError as e:
         print(f"❌ Error accessing AWS resources: {e}")
-        return None, None
+        return None, None, region
 
 def test_data_api(cluster_arn, secret_arn, region):
     """Test the Data API connection"""
@@ -125,7 +147,7 @@ def test_data_api(cluster_arn, secret_arn, region):
         response = client.execute_statement(
             resourceArn=cluster_arn,
             secretArn=secret_arn,
-            database='alex',
+            database='samy',
             sql='SELECT 1 as test_connection, current_timestamp as server_time'
         )
         
@@ -141,7 +163,7 @@ def test_data_api(cluster_arn, secret_arn, region):
         error_code = e.response['Error']['Code']
         if error_code == 'BadRequestException':
             # This might mean the database doesn't exist yet
-            print(f"   ⚠️  Database 'alex' might not exist or credentials are incorrect")
+            print(f"   ⚠️  Database 'samy' might not exist or credentials are incorrect")
             print(f"   Error: {e.response['Error']['Message']}")
             
             # Try without specifying database
@@ -152,7 +174,7 @@ def test_data_api(cluster_arn, secret_arn, region):
                     secretArn=secret_arn,
                     sql='SELECT current_database()'
                 )
-                print(f"   ✅ Connection successful (but 'alex' database may not exist)")
+                print(f"   ✅ Connection successful (but 'samy' database may not exist)")
                 return True
             except:
                 pass
@@ -166,7 +188,7 @@ def test_data_api(cluster_arn, secret_arn, region):
         response = client.execute_statement(
             resourceArn=cluster_arn,
             secretArn=secret_arn,
-            database='alex',
+            database='samy',
             sql="""
                 SELECT table_name 
                 FROM information_schema.tables 
@@ -194,8 +216,8 @@ def test_data_api(cluster_arn, secret_arn, region):
         response = client.execute_statement(
             resourceArn=cluster_arn,
             secretArn=secret_arn,
-            database='alex',
-            sql="SELECT pg_database_size('alex') as size_bytes"
+            database='samy',
+            sql="SELECT pg_database_size('samy') as size_bytes"
         )
         
         if response['records']:
@@ -220,12 +242,12 @@ def main():
     print("🚀 Aurora Data API Connection Test")
     print("=" * 50)
     
-    # Get current region
-    region = get_current_region()
-    print(f"📍 Using AWS Region: {region}")
+    # Get initial region (may be overridden by cluster ARN)
+    initial_region = get_current_region()
+    print(f"📍 Initial AWS Region: {initial_region}")
     
-    # Get cluster and secret ARNs
-    cluster_arn, secret_arn = get_cluster_details(region)
+    # Get cluster and secret ARNs (this may update the region if cluster ARN has a different region)
+    cluster_arn, secret_arn, region = get_cluster_details(initial_region)
     
     if not cluster_arn or not secret_arn:
         print("\n❌ Could not find Aurora cluster or credentials")
@@ -234,6 +256,17 @@ def main():
         print("   2. Enabled Data API on the cluster")
         print("   3. Created credentials in Secrets Manager")
         sys.exit(1)
+    
+    # Verify region matches cluster ARN region
+    cluster_region = extract_region_from_arn(cluster_arn)
+    if cluster_region and cluster_region != region:
+        print(f"⚠️  Warning: Region mismatch detected!")
+        print(f"   Cluster ARN region: {cluster_region}")
+        print(f"   Using region: {region}")
+        print(f"   Updating to use cluster region: {cluster_region}")
+        region = cluster_region
+    
+    print(f"📍 Final AWS Region: {region}")
     
     # Test the Data API
     success = test_data_api(cluster_arn, secret_arn, region)

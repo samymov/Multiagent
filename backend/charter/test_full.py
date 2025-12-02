@@ -3,6 +3,7 @@
 Full test for Charter agent via Lambda
 """
 
+import os
 import json
 import boto3
 import time
@@ -18,7 +19,10 @@ def test_charter_lambda():
     """Test the Charter agent via Lambda invocation"""
 
     db = Database()
-    lambda_client = boto3.client("lambda")
+    
+    # Get region from environment or default to us-east-1
+    aws_region = os.getenv('DEFAULT_AWS_REGION', os.getenv('AWS_REGION', 'us-east-1'))
+    lambda_client = boto3.client("lambda", region_name=aws_region)
 
     # Create test job
     test_user_id = "test_user_001"
@@ -69,7 +73,7 @@ def test_charter_lambda():
     # Invoke Lambda
     try:
         response = lambda_client.invoke(
-            FunctionName="alex-charter",
+            FunctionName="samy-charter",
             InvocationType="RequestResponse",
             Payload=json.dumps({"job_id": job_id, "portfolio_data": portfolio_data}),
         )

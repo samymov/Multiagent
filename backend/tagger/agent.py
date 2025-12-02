@@ -3,7 +3,7 @@ InstrumentTagger Agent - Classifies financial instruments using OpenAI Agents SD
 """
 
 import os
-from typing import List
+from typing import List, Tuple
 import logging
 from decimal import Decimal
 
@@ -24,8 +24,9 @@ load_dotenv(override=True)
 logger = logging.getLogger(__name__)
 
 # Get configuration
-BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-BEDROCK_REGION = os.getenv("BEDROCK_REGION", "us-west-2")
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "amazon.nova-pro-v1:0")
+# Default to us-east-1 to match terraform configuration
+BEDROCK_REGION = os.getenv("BEDROCK_REGION", "us-east-1")
 
 
 class AllocationBreakdown(BaseModel):
@@ -171,12 +172,20 @@ async def classify_instrument(
         Complete classification with allocations
     """
     try:
-        # Initialize the model
+        # Remove us. prefix from model ID if present to ensure correct region usage
         model_id = BEDROCK_MODEL_ID
+        if model_id.startswith("us."):
+            model_id = model_id[3:]  # Remove "us." prefix
+            logger.info(f"Tagger: Removed us. prefix from model ID, now: {model_id}")
 
-        # Set region for LiteLLM Bedrock calls
-        bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
-        os.environ["AWS_REGION_NAME"] = bedrock_region
+        # Set region for LiteLLM Bedrock calls - set all region variables to ensure us-east-1
+        bedrock_region = BEDROCK_REGION
+        # Set all region environment variables to ensure LiteLLM uses the correct region
+        os.environ["AWS_REGION_NAME"] = bedrock_region  # LiteLLM's preferred variable
+        os.environ["AWS_REGION"] = bedrock_region  # Boto3 standard
+        os.environ["AWS_DEFAULT_REGION"] = bedrock_region  # Fallback
+        
+        logger.info(f"Using Bedrock region: {bedrock_region}, model: {model_id}")
 
         model = LitellmModel(model=f"bedrock/{model_id}")
 
@@ -205,7 +214,7 @@ async def classify_instrument(
         raise
 
 
-async def tag_instruments(instruments: List[dict]) -> List[InstrumentClassification]:
+async def tag_instruments(instruments: List[dict]) -> Tuple[List[InstrumentClassification], List[dict]]:
     """
     Tag multiple instruments with simple retry logic.
 
@@ -213,7 +222,7 @@ async def tag_instruments(instruments: List[dict]) -> List[InstrumentClassificat
         instruments: List of dicts with symbol, name, and optionally instrument_type
 
     Returns:
-        List of classifications
+        Tuple of (classifications, errors) where errors is a list of {symbol, error} dicts
     """
     import asyncio
 
@@ -231,6 +240,7 @@ async def tag_instruments(instruments: List[dict]) -> List[InstrumentClassificat
 
     # Process instruments sequentially with small delay
     results = []
+    errors = []
     for i, instrument in enumerate(instruments):
         # Small delay between requests to avoid rate limits
         if i > 0:
@@ -246,10 +256,12 @@ async def tag_instruments(instruments: List[dict]) -> List[InstrumentClassificat
             results.append(classification)
         except Exception as e:
             logger.error(f"Failed to classify {instrument['symbol']}: {e}")
-            results.append(None)
+            errors.append({
+                'symbol': instrument['symbol'],
+                'error': str(e)
+            })
 
-    # Filter out None values
-    return [r for r in results if r is not None]
+    return results, errors
 
 
 def classification_to_db_format(classification: InstrumentClassification) -> InstrumentCreate:

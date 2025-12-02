@@ -105,6 +105,35 @@ export default function Dashboard() {
     return { totalValue, assetClassBreakdown };
   }, [accounts, positions, instruments]);
 
+  // Check if user has completed wellness questionnaire
+  useEffect(() => {
+    async function checkWellnessScore() {
+      if (!userLoaded || !user) return;
+
+      try {
+        const token = await getToken();
+        if (!token) return;
+
+        const response = await fetch(`${API_URL}/api/wellness/score`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        // If no wellness score, redirect to questionnaire
+        if (response.status === 404) {
+          window.location.href = '/wellness-questionnaire';
+          return;
+        }
+      } catch (err) {
+        // Ignore errors, just continue to dashboard
+        console.log('Wellness score check:', err);
+      }
+    }
+
+    checkWellnessScore();
+  }, [userLoaded, user, getToken]);
+
   // Load user data and accounts
   useEffect(() => {
     async function loadData() {
@@ -371,7 +400,7 @@ export default function Dashboard() {
   return (
     <>
       <Head>
-        <title>Dashboard - Alex AI Financial Advisor</title>
+        <title>Dashboard - Samy AI Financial Advisor</title>
       </Head>
       <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

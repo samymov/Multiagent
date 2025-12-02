@@ -9,13 +9,13 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
-variable "alex_api_endpoint" {
-  description = "Alex API endpoint from Part 3"
+variable "samy_api_endpoint" {
+  description = "Samy API endpoint from Part 3"
   type        = string
 }
 
-variable "alex_api_key" {
-  description = "Alex API key from Part 3"
+variable "samy_api_key" {
+  description = "Samy API key from Part 3"
   type        = string
   sensitive   = true
 }

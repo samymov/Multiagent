@@ -17,16 +17,17 @@ load_dotenv(env_path, override=True)
 
 # Get configuration
 VECTOR_BUCKET = os.getenv('VECTOR_BUCKET')
-SAGEMAKER_ENDPOINT = os.getenv('SAGEMAKER_ENDPOINT', 'alex-embedding-endpoint')
+SAGEMAKER_ENDPOINT = os.getenv('SAGEMAKER_ENDPOINT', 'samy-embedding-endpoint')
 INDEX_NAME = 'financial-research'
+AWS_REGION = os.getenv('AWS_REGION') or os.getenv('DEFAULT_AWS_REGION', 'us-east-1')
 
 if not VECTOR_BUCKET:
     print("Error: Please run Guide 3 Step 4 to save VECTOR_BUCKET to .env")
     exit(1)
 
-# Initialize AWS clients
-s3_vectors = boto3.client('s3vectors')
-sagemaker_runtime = boto3.client('sagemaker-runtime')
+# Initialize AWS clients with explicit region
+s3_vectors = boto3.client('s3vectors', region_name=AWS_REGION)
+sagemaker_runtime = boto3.client('sagemaker-runtime', region_name=AWS_REGION)
 
 def get_embedding(text):
     """Get embedding vector from SageMaker endpoint."""

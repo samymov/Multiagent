@@ -131,12 +131,12 @@ async def get_market_insights(
         # Get account ID
         sts = boto3.client("sts")
         account_id = sts.get_caller_identity()["Account"]
-        bucket = f"alex-vectors-{account_id}"
+        bucket = f"samy-vectors-{account_id}"
 
         # Get embeddings
         sagemaker_region = os.getenv("DEFAULT_AWS_REGION", "us-east-1")
         sagemaker = boto3.client("sagemaker-runtime", region_name=sagemaker_region)
-        endpoint_name = os.getenv("SAGEMAKER_ENDPOINT", "alex-embedding-endpoint")
+        endpoint_name = os.getenv("SAGEMAKER_ENDPOINT", "samy-embedding-endpoint")
         query = f"market analysis {' '.join(symbols[:5])}" if symbols else "market outlook"
 
         response = sagemaker.invoke_endpoint(
@@ -186,12 +186,20 @@ def create_agent(job_id: str, portfolio_data: Dict[str, Any], user_data: Dict[st
     """Create the reporter agent with tools and context."""
 
     # Get model configuration
-    model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    # Set region for LiteLLM Bedrock calls
-    bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
+    model_id = os.getenv("BEDROCK_MODEL_ID", "amazon.nova-pro-v1:0")
+    # Set region for LiteLLM Bedrock calls - set all region variables to ensure us-east-1
+    bedrock_region = os.getenv("BEDROCK_REGION", "us-east-1")
     logger.info(f"DEBUG: BEDROCK_REGION from env = {bedrock_region}")
-    os.environ["AWS_REGION_NAME"] = bedrock_region
-    logger.info(f"DEBUG: Set AWS_REGION_NAME to {bedrock_region}")
+    # Set all region environment variables to ensure LiteLLM uses the correct region
+    os.environ["AWS_REGION_NAME"] = bedrock_region  # LiteLLM's preferred variable
+    os.environ["AWS_REGION"] = bedrock_region  # Boto3 standard
+    os.environ["AWS_DEFAULT_REGION"] = bedrock_region  # Fallback
+    logger.info(f"DEBUG: Set all region env vars to {bedrock_region}")
+    
+    # Remove us. prefix from model ID if present to ensure correct region usage
+    if model_id.startswith("us."):
+        model_id = model_id[3:]  # Remove "us." prefix
+        logger.info(f"DEBUG: Removed us. prefix from model ID, now: {model_id}")
 
     model = LitellmModel(model=f"bedrock/{model_id}")
 

@@ -9,13 +9,15 @@ import datetime
 import uuid
 
 # Environment variables
-VECTOR_BUCKET = os.environ.get('VECTOR_BUCKET', 'alex-vectors')
+VECTOR_BUCKET = os.environ.get('VECTOR_BUCKET', 'samy-vectors')
 SAGEMAKER_ENDPOINT = os.environ.get('SAGEMAKER_ENDPOINT')
 INDEX_NAME = os.environ.get('INDEX_NAME', 'financial-research')
+# Get region from Lambda environment or default to us-east-1
+AWS_REGION = os.environ.get('AWS_REGION') or os.environ.get('DEFAULT_AWS_REGION', 'us-east-1')
 
-# Initialize AWS clients
-sagemaker_runtime = boto3.client('sagemaker-runtime')
-s3_vectors = boto3.client('s3vectors')
+# Initialize AWS clients with explicit region
+sagemaker_runtime = boto3.client('sagemaker-runtime', region_name=AWS_REGION)
+s3_vectors = boto3.client('s3vectors', region_name=AWS_REGION)
 
 
 def get_embedding(text):

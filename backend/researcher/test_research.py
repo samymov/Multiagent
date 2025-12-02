@@ -17,13 +17,13 @@ def get_service_url():
         # Get service ARN first
         result = subprocess.run([
             "aws", "apprunner", "list-services",
-            "--query", "ServiceSummaryList[?ServiceName=='alex-researcher'].ServiceArn",
+            "--query", "ServiceSummaryList[?ServiceName=='samy-researcher'].ServiceArn",
             "--output", "json"
         ], capture_output=True, text=True, check=True)
         
         service_arns = json.loads(result.stdout)
         if not service_arns:
-            print("❌ App Runner service 'alex-researcher' not found.")
+            print("❌ App Runner service 'samy-researcher' not found.")
             print("   Have you deployed it yet? Run: python deploy.py")
             sys.exit(1)
         
@@ -121,7 +121,7 @@ def test_research(topic=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Test the Alex Researcher service",
+        description="Test the Samy Researcher service",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

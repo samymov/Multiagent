@@ -1,5 +1,5 @@
 """
-Agent instructions and prompts for the Alex Researcher
+Agent instructions and prompts for the Samy Researcher
 """
 from datetime import datetime
 
@@ -8,7 +8,7 @@ def get_agent_instructions():
     """Get agent instructions with current date."""
     today = datetime.now().strftime("%B %d, %Y")
     
-    return f"""You are Alex, a concise investment researcher. Today is {today}.
+    return f"""You are Samy, a concise investment researcher. Today is {today}.
 
 CRITICAL: Work quickly and efficiently. You have limited time.
 

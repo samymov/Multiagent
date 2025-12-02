@@ -264,7 +264,7 @@ export default function AdvisorTeam() {
   return (
     <>
       <Head>
-        <title>Advisor Team - Alex AI Financial Advisor</title>
+        <title>Advisor Team - Samy AI Financial Advisor</title>
       </Head>
       <Layout>
       <div className="min-h-screen bg-gray-50 py-8">

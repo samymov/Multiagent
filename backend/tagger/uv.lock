@@ -88,23 +88,6 @@ wheels = [
 ]
 
 [[package]]
-name = "alex-database"
-version = "0.1.0"
-source = { editable = "../database" }
-dependencies = [
-    { name = "boto3" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "boto3", specifier = ">=1.40.8" },
-    { name = "pydantic", specifier = ">=2.11.7" },
-    { name = "python-dotenv", specifier = ">=1.1.1" },
-]
-
-[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1727,6 +1710,23 @@ wheels = [
 ]
 
 [[package]]
+name = "samy-database"
+version = "0.1.0"
+source = { editable = "../database" }
+dependencies = [
+    { name = "boto3" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "boto3", specifier = ">=1.40.8" },
+    { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1774,25 +1774,25 @@ name = "tagger"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "alex-database" },
     { name = "boto3" },
     { name = "langfuse" },
     { name = "openai-agents", extra = ["litellm"] },
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "python-dotenv" },
+    { name = "samy-database" },
     { name = "tenacity" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "alex-database", editable = "../database" },
     { name = "boto3", specifier = ">=1.40.9" },
     { name = "langfuse", specifier = ">=3.3.4" },
     { name = "openai-agents", extras = ["litellm"], specifier = ">=0.2.6" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-ai", specifier = ">=1.0.6" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
+    { name = "samy-database", editable = "../database" },
     { name = "tenacity", specifier = ">=9.1.2" },
 ]
 

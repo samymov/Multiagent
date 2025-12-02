@@ -18,7 +18,10 @@ def test_reporter_lambda():
     """Test the Reporter agent via Lambda invocation"""
     
     db = Database()
-    lambda_client = boto3.client('lambda')
+    
+    # Get region from environment or default to us-east-1
+    aws_region = os.getenv('DEFAULT_AWS_REGION', os.getenv('AWS_REGION', 'us-east-1'))
+    lambda_client = boto3.client('lambda', region_name=aws_region)
     
     # Create test job
     test_user_id = "test_user_001"
@@ -36,7 +39,7 @@ def test_reporter_lambda():
     # Invoke Lambda
     try:
         response = lambda_client.invoke(
-            FunctionName='alex-reporter',
+            FunctionName='samy-reporter',
             InvocationType='RequestResponse',
             Payload=json.dumps({'job_id': job_id})
         )
@@ -44,13 +47,40 @@ def test_reporter_lambda():
         result = json.loads(response['Payload'].read())
         print(f"Lambda Response: {json.dumps(result, indent=2)}")
         
+        # Unwrap Lambda response format
+        if isinstance(result, dict) and "statusCode" in result:
+            if result["statusCode"] == 200:
+                if isinstance(result.get("body"), str):
+                    lambda_body = json.loads(result["body"])
+                else:
+                    lambda_body = result.get("body", {})
+            else:
+                print(f"\n❌ Lambda returned error status: {result['statusCode']}")
+                print(f"   Body: {result.get('body', 'N/A')}")
+                return
+        else:
+            lambda_body = result
+        
         # Check database for results
         time.sleep(2)  # Give it a moment
         job = db.jobs.find_by_id(job_id)
         
         if job and job.get('report_payload'):
             print("\n✅ Report generated successfully!")
-            print(f"Report preview: {job['report_payload'][:500]}...")
+            report_payload = job['report_payload']
+            
+            # Handle report_payload - it might be a dict with 'content' or 'analysis' key, or a string
+            if isinstance(report_payload, dict):
+                # Try to find the actual report content
+                report_content = report_payload.get('content') or report_payload.get('analysis') or report_payload.get('final_output') or str(report_payload)
+            else:
+                report_content = str(report_payload)
+            
+            # Show preview
+            if isinstance(report_content, str) and len(report_content) > 500:
+                print(f"Report preview (first 500 chars):\n{report_content[:500]}...")
+            else:
+                print(f"Report content:\n{report_content}")
         else:
             print("\n❌ No report found in database")
             

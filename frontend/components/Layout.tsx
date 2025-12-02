@@ -32,7 +32,7 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex items-center gap-8">
                 <Link href="/dashboard" className="flex items-center">
                   <h1 className="text-xl font-bold text-dark">
-                    Alex <span className="text-primary">AI Financial Advisor</span>
+                    Samy <span className="text-primary">AI Financial Advisor</span>
                   </h1>
                 </Link>
 
@@ -67,6 +67,16 @@ export default function Layout({ children }: LayoutProps) {
                     }`}
                   >
                     Advisor Team
+                  </Link>
+                  <Link
+                    href="/wellness-score"
+                    className={`text-sm font-medium transition-colors ${
+                      isActive("/wellness-score")
+                        ? "text-primary"
+                        : "text-gray-600 hover:text-primary"
+                    }`}
+                  >
+                    Wellness Score
                   </Link>
                   <Link
                     href="/analysis"
@@ -157,7 +167,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center">
-                © 2025 Alex AI Financial Advisor. Powered by AI agents and built with care.
+                © 2025 Samy AI Financial Advisor. Powered by AI agents and built with care.
               </p>
             </div>
           </div>

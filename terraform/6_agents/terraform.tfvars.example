@@ -6,26 +6,26 @@
 aws_region = "us-east-1"
 
 # Aurora cluster ARN from Part 5 (get from Terraform output)
-aurora_cluster_arn = "arn:aws:rds:us-east-1:123456789012:cluster:alex-aurora-cluster"
+aurora_cluster_arn = "arn:aws:rds:us-east-1:123456789012:cluster:samy-aurora-cluster"
 
 # Aurora secret ARN from Part 5 (get from Terraform output)
-aurora_secret_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:alex-aurora-credentials-xxxxx"
+aurora_secret_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:samy-aurora-credentials-xxxxx"
 
 # S3 Vectors bucket name from Part 3
-# Format: alex-vectors-{your-aws-account-id}
-vector_bucket = "alex-vectors-123456789012"
+# Format: samy-vectors-{your-aws-account-id}
+vector_bucket = "samy-vectors-123456789012"
 
 # Bedrock model configuration
 # Using Amazon Nova Pro model for better reliability
-bedrock_model_id = "us.amazon.nova-pro-v1:0"
+# Using amazon.nova-pro-v1:0 (without us. prefix) to ensure us-east-1 region is used
+bedrock_model_id = "amazon.nova-pro-v1:0"
 
-# Bedrock region (us-west-2 has the most models available)
-# Note: This can be different from your Lambda region - cross-region calls work fine
-bedrock_region = "us-west-2"
+# Bedrock region - using us-east-1 to match Lambda region
+bedrock_region = "us-east-1"
 
 # SageMaker endpoint name from Part 2
-# Default: alex-embedding-endpoint
-sagemaker_endpoint = "alex-embedding-endpoint"
+# Default: samy-embedding-endpoint
+sagemaker_endpoint = "samy-embedding-endpoint"
 
 # Polygon.io API configuration for real-time market prices
 # Sign up for free at https://polygon.io (no credit card required)

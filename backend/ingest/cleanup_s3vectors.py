@@ -38,8 +38,9 @@ def delete_all_vectors():
         print("Searching for vectors to delete...")
         
         # Get a real embedding for a generic search term
-        sagemaker_runtime = boto3.client('sagemaker-runtime')
-        SAGEMAKER_ENDPOINT = os.getenv('SAGEMAKER_ENDPOINT', 'alex-embedding-endpoint')
+        AWS_REGION = os.getenv('AWS_REGION') or os.getenv('DEFAULT_AWS_REGION', 'us-east-1')
+        sagemaker_runtime = boto3.client('sagemaker-runtime', region_name=AWS_REGION)
+        SAGEMAKER_ENDPOINT = os.getenv('SAGEMAKER_ENDPOINT', 'samy-embedding-endpoint')
         
         response = sagemaker_runtime.invoke_endpoint(
             EndpointName=SAGEMAKER_ENDPOINT,

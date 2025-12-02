@@ -141,10 +141,18 @@ def create_agent(job_id: str, portfolio_data: Dict[str, Any], db=None):
     """Create the charter agent without tools - will output JSON directly."""
     
     # Get model configuration
-    model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    # Set region for LiteLLM Bedrock calls
-    bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
-    os.environ["AWS_REGION_NAME"] = bedrock_region
+    model_id = os.getenv("BEDROCK_MODEL_ID", "amazon.nova-pro-v1:0")
+    # Set region for LiteLLM Bedrock calls - set all region variables to ensure us-east-1
+    bedrock_region = os.getenv("BEDROCK_REGION", "us-east-1")
+    # Set all region environment variables to ensure LiteLLM uses the correct region
+    os.environ["AWS_REGION_NAME"] = bedrock_region  # LiteLLM's preferred variable
+    os.environ["AWS_REGION"] = bedrock_region  # Boto3 standard
+    os.environ["AWS_DEFAULT_REGION"] = bedrock_region  # Fallback
+    
+    # Remove us. prefix from model ID if present to ensure correct region usage
+    if model_id.startswith("us."):
+        model_id = model_id[3:]  # Remove "us." prefix
+        logger.info(f"Charter: Removed us. prefix from model ID, now: {model_id}")
     
     logger.info(f"Charter: Creating agent with model_id={model_id}, region={bedrock_region}")
     logger.info(f"Charter: Job ID: {job_id}")

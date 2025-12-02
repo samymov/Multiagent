@@ -45,9 +45,16 @@ def get_user_preferences(job_id: str) -> Dict[str, Any]:
             # Get user preferences
             user = db.users.find_by_clerk_id(job['clerk_user_id'])
             if user:
+                # Handle None values from database
+                target_income = user.get('target_retirement_income')
+                if target_income is None:
+                    target_income = 80000
+                else:
+                    target_income = float(target_income)
+                
                 return {
-                    'years_until_retirement': user.get('years_until_retirement', 30),
-                    'target_retirement_income': float(user.get('target_retirement_income', 80000)),
+                    'years_until_retirement': user.get('years_until_retirement') or 30,
+                    'target_retirement_income': target_income,
                     'current_age': 40  # Default for now
                 }
     except Exception as e:
@@ -176,11 +183,14 @@ def lambda_handler(event, context):
                         }
 
                         for account in accounts:
+                            # Handle None values safely
+                            cash_balance = account.get('cash_balance') or 0
+                            
                             account_data = {
                                 'id': account['id'],
                                 'name': account['account_name'],
                                 'type': account.get('account_type', 'investment'),
-                                'cash_balance': float(account.get('cash_balance', 0)),
+                                'cash_balance': float(cash_balance),
                                 'positions': []
                             }
 
@@ -188,9 +198,11 @@ def lambda_handler(event, context):
                             for position in positions:
                                 instrument = db.instruments.find_by_symbol(position['symbol'])
                                 if instrument:
+                                    # Handle None values safely
+                                    quantity = position.get('quantity') or 0
                                     account_data['positions'].append({
                                         'symbol': position['symbol'],
-                                        'quantity': float(position['quantity']),
+                                        'quantity': float(quantity),
                                         'instrument': instrument
                                     })
 

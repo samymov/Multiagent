@@ -1,6 +1,6 @@
 # Terraform Infrastructure
 
-This directory contains Terraform configurations for the Alex Financial Planner project.
+This directory contains Terraform configurations for the Samy Financial Planner project.
 
 ## Structure
 
@@ -56,8 +56,8 @@ terraform destroy
 Some Terraform configurations require environment variables from your `.env` file:
 
 - `OPENAI_API_KEY` - For the researcher agent (Part 4)
-- `ALEX_API_ENDPOINT` - API Gateway endpoint (from Part 3)
-- `ALEX_API_KEY` - API key for ingestion (from Part 3)
+- `SAMY_API_ENDPOINT` - API Gateway endpoint (from Part 3)
+- `SAMY_API_KEY` - API key for ingestion (from Part 3)
 - `AURORA_CLUSTER_ARN` - Aurora cluster ARN (from Part 5)
 - `AURORA_SECRET_ARN` - Secrets Manager ARN (from Part 5)
 - `VECTOR_BUCKET` - S3 Vectors bucket name (from Part 3)

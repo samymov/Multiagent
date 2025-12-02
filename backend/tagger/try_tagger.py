@@ -65,7 +65,7 @@ class TaggerTest:
             s3_client = boto3.client('s3', region_name='us-east-1')
 
             # Use the existing Lambda packages bucket
-            bucket_name = f"alex-lambda-packages-{boto3.client('sts').get_caller_identity()['Account']}"
+            bucket_name = f"samy-lambda-packages-{boto3.client('sts').get_caller_identity()['Account']}"
             key = 'tagger/tagger_lambda.zip'
 
             print(f"Uploading to S3 bucket: {bucket_name}")
@@ -80,7 +80,7 @@ class TaggerTest:
             # Update Lambda function code from S3
             print("Updating Lambda function from S3...")
             response = self.lambda_client.update_function_code(
-                FunctionName='alex-tagger',
+                FunctionName='samy-tagger',
                 S3Bucket=bucket_name,
                 S3Key=key
             )
@@ -122,7 +122,7 @@ class TaggerTest:
             start_time = time.time()
 
             response = self.lambda_client.invoke(
-                FunctionName='alex-tagger',
+                FunctionName='samy-tagger',
                 InvocationType='RequestResponse',
                 Payload=json.dumps({'instruments': test_instruments})
             )

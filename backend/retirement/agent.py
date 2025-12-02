@@ -22,13 +22,16 @@ def calculate_portfolio_value(portfolio_data: Dict[str, Any]) -> float:
     total_value = 0.0
 
     for account in portfolio_data.get("accounts", []):
-        cash = float(account.get("cash_balance", 0))
+        cash_balance = account.get("cash_balance") or 0
+        cash = float(cash_balance)
         total_value += cash
 
         for position in account.get("positions", []):
-            quantity = float(position.get("quantity", 0))
+            quantity_val = position.get("quantity") or 0
+            quantity = float(quantity_val)
             instrument = position.get("instrument", {})
-            price = float(instrument.get("current_price", 100))
+            price_val = instrument.get("current_price") or 100
+            price = float(price_val)
             total_value += quantity * price
 
     return total_value
@@ -44,14 +47,17 @@ def calculate_asset_allocation(portfolio_data: Dict[str, Any]) -> Dict[str, floa
     total_value = 0.0
 
     for account in portfolio_data.get("accounts", []):
-        cash = float(account.get("cash_balance", 0))
+        cash_balance = account.get("cash_balance") or 0
+        cash = float(cash_balance)
         total_cash += cash
         total_value += cash
 
         for position in account.get("positions", []):
-            quantity = float(position.get("quantity", 0))
+            quantity_val = position.get("quantity") or 0
+            quantity = float(quantity_val)
             instrument = position.get("instrument", {})
-            price = float(instrument.get("current_price", 100))
+            price_val = instrument.get("current_price") or 100
+            price = float(price_val)
             value = quantity * price
             total_value += value
 
@@ -239,10 +245,18 @@ def create_agent(
     """Create the retirement agent with tools and context."""
 
     # Get model configuration
-    model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    # Set region for LiteLLM Bedrock calls
-    bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
-    os.environ["AWS_REGION_NAME"] = bedrock_region
+    model_id = os.getenv("BEDROCK_MODEL_ID", "amazon.nova-pro-v1:0")
+    # Set region for LiteLLM Bedrock calls - set all region variables to ensure us-east-1
+    bedrock_region = os.getenv("BEDROCK_REGION", "us-east-1")
+    # Set all region environment variables to ensure LiteLLM uses the correct region
+    os.environ["AWS_REGION_NAME"] = bedrock_region  # LiteLLM's preferred variable
+    os.environ["AWS_REGION"] = bedrock_region  # Boto3 standard
+    os.environ["AWS_DEFAULT_REGION"] = bedrock_region  # Fallback
+    
+    # Remove us. prefix from model ID if present to ensure correct region usage
+    if model_id.startswith("us."):
+        model_id = model_id[3:]  # Remove "us." prefix
+        logger.info(f"Retirement: Removed us. prefix from model ID, now: {model_id}")
 
     model = LitellmModel(model=f"bedrock/{model_id}")
 

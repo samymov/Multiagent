@@ -88,23 +88,6 @@ wheels = [
 ]
 
 [[package]]
-name = "alex-database"
-version = "0.1.0"
-source = { editable = "../database" }
-dependencies = [
-    { name = "boto3" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "boto3", specifier = ">=1.40.8" },
-    { name = "pydantic", specifier = ">=2.11.7" },
-    { name = "python-dotenv", specifier = ">=1.1.1" },
-]
-
-[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1172,7 +1155,6 @@ name = "planner"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "alex-database" },
     { name = "boto3" },
     { name = "langfuse" },
     { name = "openai-agents", extra = ["litellm"] },
@@ -1180,12 +1162,12 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "python-dotenv" },
+    { name = "samy-database" },
     { name = "tenacity" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "alex-database", editable = "../database" },
     { name = "boto3", specifier = ">=1.40.8" },
     { name = "langfuse", specifier = ">=3.3.4" },
     { name = "openai-agents", extras = ["litellm"], specifier = ">=0.3.0" },
@@ -1193,6 +1175,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-ai", specifier = ">=1.0.6" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
+    { name = "samy-database", editable = "../database" },
     { name = "tenacity", specifier = ">=9.1.2" },
 ]
 
@@ -1784,6 +1767,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6d/05/d52bf1e65044b4e5e27d4e63e8d1579dbdec54fce685908ae09bc3720030/s3transfer-0.13.1.tar.gz", hash = "sha256:c3fdba22ba1bd367922f27ec8032d6a1cf5f10c934fb5d68cf60fd5a23d936cf", size = 150589, upload-time = "2025-07-18T19:22:42.31Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6d/4f/d073e09df851cfa251ef7840007d04db3293a0482ce607d2b993926089be/s3transfer-0.13.1-py3-none-any.whl", hash = "sha256:a981aa7429be23fe6dfc13e80e4020057cbab622b08c0315288758d67cabc724", size = 85308, upload-time = "2025-07-18T19:22:40.947Z" },
+]
+
+[[package]]
+name = "samy-database"
+version = "0.1.0"
+source = { editable = "../database" }
+dependencies = [
+    { name = "boto3" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "boto3", specifier = ">=1.40.8" },
+    { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
 ]
 
 [[package]]

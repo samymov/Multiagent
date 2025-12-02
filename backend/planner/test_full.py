@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run a full end-to-end test of the Alex agent orchestration.
+Run a full end-to-end test of the Samy agent orchestration.
 This creates a test job and monitors it through completion.
 
 Usage:
@@ -27,11 +27,14 @@ logger = logging.getLogger(__name__)
 from src import Database
 
 db = Database()
-sqs = boto3.client('sqs')
-sts = boto3.client('sts')
+
+# Get region from environment or default to us-east-1
+aws_region = os.getenv('DEFAULT_AWS_REGION', os.getenv('AWS_REGION', 'us-east-1'))
+sqs = boto3.client('sqs', region_name=aws_region)
+sts = boto3.client('sts', region_name=aws_region)
 
 # Get configuration
-QUEUE_NAME = os.getenv('SQS_QUEUE_NAME', 'alex-analysis-jobs')
+QUEUE_NAME = os.getenv('SQS_QUEUE_NAME', 'samy-analysis-jobs')
 
 
 def get_queue_url():
@@ -49,15 +52,14 @@ def get_queue_url():
 def main():
     """Run the full test."""
     print("=" * 70)
-    print("🎯 Alex Agent Orchestration - Full Test")
+    print("🎯 Samy Agent Orchestration - Full Test")
     print("=" * 70)
     
     # Display AWS info
     account_id = sts.get_caller_identity()['Account']
-    region = boto3.Session().region_name
     print(f"AWS Account: {account_id}")
-    print(f"AWS Region: {region}")
-    print(f"Bedrock Region: {os.getenv('BEDROCK_REGION', 'us-west-2')}")
+    print(f"AWS Region: {aws_region}")
+    print(f"Bedrock Region: {os.getenv('BEDROCK_REGION', 'us-east-1')}")
     print(f"Bedrock Model: {os.getenv('BEDROCK_MODEL_ID', 'Not set')}")
     print()
     

@@ -47,7 +47,8 @@ output "setup_instructions" {
     aws rds-data execute-statement \
       --resource-arn ${aws_rds_cluster.aurora.arn} \
       --secret-arn ${aws_secretsmanager_secret.db_credentials.arn} \
-      --database alex \
+      --database samy \
+      --region us-east-1 \
       --sql "SELECT version()"
     
     To set up the database schema:

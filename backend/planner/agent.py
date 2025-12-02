@@ -16,13 +16,15 @@ from agents.extensions.models.litellm_model import LitellmModel
 logger = logging.getLogger()
 
 # Initialize Lambda client
-lambda_client = boto3.client("lambda")
+# Get region for Lambda client
+aws_region = os.getenv('DEFAULT_AWS_REGION', os.getenv('AWS_REGION', 'us-east-1'))
+lambda_client = boto3.client("lambda", region_name=aws_region)
 
 # Lambda function names from environment
-TAGGER_FUNCTION = os.getenv("TAGGER_FUNCTION", "alex-tagger")
-REPORTER_FUNCTION = os.getenv("REPORTER_FUNCTION", "alex-reporter")
-CHARTER_FUNCTION = os.getenv("CHARTER_FUNCTION", "alex-charter")
-RETIREMENT_FUNCTION = os.getenv("RETIREMENT_FUNCTION", "alex-retirement")
+TAGGER_FUNCTION = os.getenv("TAGGER_FUNCTION", "samy-tagger")
+REPORTER_FUNCTION = os.getenv("REPORTER_FUNCTION", "samy-reporter")
+CHARTER_FUNCTION = os.getenv("CHARTER_FUNCTION", "samy-charter")
+RETIREMENT_FUNCTION = os.getenv("RETIREMENT_FUNCTION", "samy-retirement")
 MOCK_LAMBDAS = os.getenv("MOCK_LAMBDAS", "false").lower() == "true"
 
 
@@ -155,27 +157,40 @@ def load_portfolio_summary(job_id: str, db) -> Dict[str, Any]:
         total_cash = 0.0
         
         for account in accounts:
-            total_cash += float(account.get("cash_balance", 0))
+            cash_balance = account.get("cash_balance") or 0
+            total_cash += float(cash_balance)
             positions = db.positions.find_by_account(account["id"])
             total_positions += len(positions)
             
             # Add position values
             for position in positions:
                 instrument = db.instruments.find_by_symbol(position["symbol"])
-                if instrument and instrument.get("current_price"):
-                    price = float(instrument["current_price"])
-                    quantity = float(position["quantity"])
-                    total_value += price * quantity
+                if instrument:
+                    current_price = instrument.get("current_price")
+                    if current_price is not None:
+                        try:
+                            price = float(current_price)
+                            quantity = float(position.get("quantity") or 0)
+                            total_value += price * quantity
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Planner: Could not convert price/quantity for {position['symbol']}: {e}")
         
         total_value += total_cash
         
         # Return only summary statistics
+        # Handle None values from database
+        target_income = user.get("target_retirement_income")
+        if target_income is None:
+            target_income = 80000
+        else:
+            target_income = float(target_income)
+        
         return {
             "total_value": total_value,
             "num_accounts": len(accounts),
             "num_positions": total_positions,
-            "years_until_retirement": user.get("years_until_retirement", 30),
-            "target_retirement_income": float(user.get("target_retirement_income", 80000))
+            "years_until_retirement": user.get("years_until_retirement") or 30,
+            "target_retirement_income": target_income
         }
 
     except Exception as e:
@@ -263,10 +278,18 @@ def create_agent(job_id: str, portfolio_summary: Dict[str, Any], db):
     context = PlannerContext(job_id=job_id)
 
     # Get model configuration
-    model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    # Set region for LiteLLM Bedrock calls
-    bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
-    os.environ["AWS_REGION_NAME"] = bedrock_region
+    model_id = os.getenv("BEDROCK_MODEL_ID", "amazon.nova-pro-v1:0")
+    # Set region for LiteLLM Bedrock calls - set all region variables to ensure us-east-1
+    bedrock_region = os.getenv("BEDROCK_REGION", "us-east-1")
+    # Set all region environment variables to ensure LiteLLM uses the correct region
+    os.environ["AWS_REGION_NAME"] = bedrock_region  # LiteLLM's preferred variable
+    os.environ["AWS_REGION"] = bedrock_region  # Boto3 standard
+    os.environ["AWS_DEFAULT_REGION"] = bedrock_region  # Fallback
+    
+    # Remove us. prefix from model ID if present to ensure correct region usage
+    if model_id.startswith("us."):
+        model_id = model_id[3:]  # Remove "us." prefix
+        logger.info(f"Planner: Removed us. prefix from model ID, now: {model_id}")
 
     model = LitellmModel(model=f"bedrock/{model_id}")
 

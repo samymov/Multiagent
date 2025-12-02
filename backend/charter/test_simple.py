@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 from src import Database
-from src.schemas import JobCreate
+from src.schemas import JobCreate, UserCreate
 from lambda_handler import lambda_handler
 
 
@@ -19,8 +19,23 @@ def test_charter():
 
     # Create a real job in the database
     db = Database()
+    
+    # Check/create test user first (required for foreign key constraint)
+    test_user_id = "test_user_001"
+    user = db.users.find_by_clerk_id(test_user_id)
+    if not user:
+        user_data = UserCreate(
+            clerk_user_id=test_user_id,
+            display_name="Test Charter User"
+        )
+        db.users.create(user_data.model_dump())
+        print(f"Created test user: {test_user_id}")
+    else:
+        print(f"Test user exists: {test_user_id}")
+    
+    # Now create the job
     job_create = JobCreate(
-        clerk_user_id="test_user_001", job_type="portfolio_analysis", request_payload={"test": True}
+        clerk_user_id=test_user_id, job_type="portfolio_analysis", request_payload={"test": True}
     )
     job_id = db.jobs.create(job_create.model_dump())
     print(f"Created test job: {job_id}")

@@ -484,7 +484,7 @@ export default function Analysis() {
   return (
     <>
       <Head>
-        <title>Analysis - Alex AI Financial Advisor</title>
+        <title>Analysis - Samy AI Financial Advisor</title>
       </Head>
       <Layout>
       <div className="min-h-screen bg-gray-50 py-8">

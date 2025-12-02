@@ -6,14 +6,14 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Alex AI Financial Advisor - Intelligent Portfolio Management</title>
+        <title>Samy AI Financial Advisor - Intelligent Portfolio Management</title>
       </Head>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50">
       {/* Navigation */}
       <nav className="px-8 py-6 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="text-2xl font-bold text-dark">
-            Alex <span className="text-primary">AI Financial Advisor</span>
+            Samy <span className="text-primary">AI Financial Advisor</span>
           </div>
           <div className="flex gap-4">
             <SignedOut>
@@ -150,7 +150,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="px-8 py-6 bg-gray-900 text-gray-400 text-center text-sm">
-        <p>© 2025 Alex AI Financial Advisor. All rights reserved.</p>
+        <p>© 2025 Samy AI Financial Advisor. All rights reserved.</p>
         <p className="mt-2">
           This AI-generated advice has not been vetted by a qualified financial advisor and should not be used for trading decisions. 
           For informational purposes only.

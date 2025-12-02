@@ -32,7 +32,7 @@ def run_command(cmd, capture_output=False, shell=False):
 
 
 def main():
-    print("Alex Researcher Service - Docker Deployment")
+    print("Samy Researcher Service - Docker Deployment")
     print("===========================================")
 
     # Get AWS account ID
@@ -47,7 +47,7 @@ def main():
         print("Error: DEFAULT_AWS_REGION not found in your .env file.")
         sys.exit(1)
 
-    ecr_repository = "alex-researcher"
+    ecr_repository = "samy-researcher"
 
     print(f"AWS Account: {account_id}")
     print(f"Region: {region}")
@@ -137,7 +137,7 @@ def main():
                 "--region",
                 region,
                 "--query",
-                "ServiceSummaryList[?ServiceName=='alex-researcher'].ServiceArn",
+                "ServiceSummaryList[?ServiceName=='samy-researcher'].ServiceArn",
                 "--output",
                 "json",
             ],
@@ -189,9 +189,9 @@ def main():
                                         "Port": "8000",
                                         "RuntimeEnvironmentVariables": {
                                             "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", ""),
-                                            "ALEX_API_KEY": os.environ.get("ALEX_API_KEY", ""),
-                                            "ALEX_API_ENDPOINT": os.environ.get(
-                                                "ALEX_API_ENDPOINT", ""
+                                            "SAMY_API_KEY": os.environ.get("SAMY_API_KEY", ""),
+                                            "SAMY_API_ENDPOINT": os.environ.get(
+                                                "SAMY_API_ENDPOINT", ""
                                             ),
                                         },
                                     },
@@ -311,7 +311,7 @@ def main():
                 )
                 print("\nTo manually deploy:")
                 print("  1. Go to AWS Console > App Runner")
-                print("  2. Select 'alex-researcher' service")
+                print("  2. Select 'samy-researcher' service")
                 print("  3. Click 'Deploy' to pull the latest image")
     except Exception as e:
         print(f"\nCouldn't automatically start deployment: {e}")

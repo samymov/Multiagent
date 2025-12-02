@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Full end-to-end test via SQS for the Alex platform"""
+"""Full end-to-end test via SQS for the Samy platform"""
 
 import os
 import json
@@ -71,7 +71,10 @@ def main():
     print("=" * 70)
     
     db = Database()
-    sqs = boto3.client('sqs')
+    
+    # Get region from environment or default to us-east-1
+    aws_region = os.getenv('DEFAULT_AWS_REGION', os.getenv('AWS_REGION', 'us-east-1'))
+    sqs = boto3.client('sqs', region_name=aws_region)
     
     # Setup test data
     test_user_id = setup_test_data(db)
@@ -96,7 +99,7 @@ def main():
     print(f"  ✓ Created job: {job_id}")
     
     # Get queue URL
-    QUEUE_NAME = 'alex-analysis-jobs'
+    QUEUE_NAME = 'samy-analysis-jobs'
     response = sqs.list_queues(QueueNamePrefix=QUEUE_NAME)
     queue_url = None
     for url in response.get('QueueUrls', []):

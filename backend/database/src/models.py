@@ -59,6 +59,10 @@ class Users(BaseModel):
         params = [{'name': 'clerk_id', 'value': {'stringValue': clerk_user_id}}]
         return self.db.query_one(sql, params)
     
+    def create(self, data: Dict, returning: str = 'clerk_user_id') -> str:
+        """Create a new user - override to use clerk_user_id instead of id"""
+        return self.db.insert(self.table_name, data, returning=returning)
+    
     def create_user(self, clerk_user_id: str, display_name: str = None, 
                    years_until_retirement: int = None,
                    target_retirement_income: Decimal = None) -> str:

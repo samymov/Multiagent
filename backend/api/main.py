@@ -1,5 +1,5 @@
 """
-FastAPI backend for Alex Financial Advisor
+FastAPI backend for Samy Financial Advisor
 Handles all API routes with Clerk JWT authentication
 """
 
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Alex Financial Advisor API",
+    title="Samy Financial Advisor API",
     description="Backend API for AI-powered financial planning",
     version="1.0.0"
 )
@@ -761,6 +761,343 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
 
     except Exception as e:
         logger.error(f"Error populating test data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Wellness Questionnaire Models
+class WellnessQuestionnaireRequest(BaseModel):
+    monthlyIncome: Optional[float] = None
+    monthlyExpenses: Optional[float] = None
+    savingsRate: Optional[float] = None
+    hasBudget: Optional[bool] = None
+    tracksSpending: Optional[bool] = None
+    emergencyFundMonths: Optional[float] = None
+    hasHealthInsurance: Optional[bool] = None
+    hasLifeInsurance: Optional[bool] = None
+    hasDisabilityInsurance: Optional[bool] = None
+    hasFinancialGoals: Optional[bool] = None
+    goalTypes: Optional[List[str]] = None
+    goalTimeline: Optional[str] = None
+    progressOnGoals: Optional[float] = None
+    retirementAccountBalance: Optional[float] = None
+    retirementContributionRate: Optional[float] = None
+    hasRetirementPlan: Optional[bool] = None
+    yearsUntilRetirement: Optional[int] = None
+
+def calculate_wellness_scores(questionnaire_data: dict) -> dict:
+    """Calculate wellness scores based on questionnaire responses"""
+    
+    # Pillar 1: Take Control of Finances (0-100)
+    take_control_score = 0
+    if questionnaire_data.get('savingsRate'):
+        savings_rate = float(questionnaire_data['savingsRate'])
+        if savings_rate >= 20:
+            take_control_score += 40
+        elif savings_rate >= 10:
+            take_control_score += 30
+        elif savings_rate >= 5:
+            take_control_score += 20
+        else:
+            take_control_score += 10
+    
+    if questionnaire_data.get('hasBudget'):
+        take_control_score += 25
+    if questionnaire_data.get('tracksSpending'):
+        take_control_score += 25
+    
+    # Bonus for good savings habits
+    if questionnaire_data.get('savingsRate', 0) >= 15:
+        take_control_score += 10
+    
+    take_control_score = min(100, take_control_score)
+    
+    # Pillar 2: Prepare for the Unexpected (0-100)
+    prepare_unexpected_score = 0
+    emergency_months = float(questionnaire_data.get('emergencyFundMonths', 0) or 0)
+    if emergency_months >= 6:
+        prepare_unexpected_score += 40
+    elif emergency_months >= 3:
+        prepare_unexpected_score += 30
+    elif emergency_months >= 1:
+        prepare_unexpected_score += 20
+    else:
+        prepare_unexpected_score += 10
+    
+    if questionnaire_data.get('hasHealthInsurance'):
+        prepare_unexpected_score += 20
+    if questionnaire_data.get('hasLifeInsurance'):
+        prepare_unexpected_score += 20
+    if questionnaire_data.get('hasDisabilityInsurance'):
+        prepare_unexpected_score += 20
+    
+    prepare_unexpected_score = min(100, prepare_unexpected_score)
+    
+    # Pillar 3: Make Progress Toward Goals (0-100)
+    goals_progress_score = 0
+    if questionnaire_data.get('hasFinancialGoals'):
+        goals_progress_score += 30
+        
+        goal_types = questionnaire_data.get('goalTypes', [])
+        if isinstance(goal_types, list):
+            goals_progress_score += min(30, len(goal_types) * 10)
+        
+        progress = float(questionnaire_data.get('progressOnGoals', 0) or 0)
+        goals_progress_score += min(40, progress * 0.4)
+    else:
+        goals_progress_score = 20  # Base score for not having goals
+    
+    goals_progress_score = min(100, goals_progress_score)
+    
+    # Pillar 4: Long-Term Security (0-100)
+    long_term_security_score = 0
+    
+    contribution_rate = float(questionnaire_data.get('retirementContributionRate', 0) or 0)
+    if contribution_rate >= 15:
+        long_term_security_score += 30
+    elif contribution_rate >= 10:
+        long_term_security_score += 25
+    elif contribution_rate >= 5:
+        long_term_security_score += 20
+    else:
+        long_term_security_score += 10
+    
+    retirement_balance = float(questionnaire_data.get('retirementAccountBalance', 0) or 0)
+    years_until_retirement = int(questionnaire_data.get('yearsUntilRetirement', 0) or 0)
+    
+    # Score based on retirement balance relative to years until retirement
+    if years_until_retirement > 0 and retirement_balance > 0:
+        # Rough calculation: should have ~1x salary saved by 30, 3x by 40, etc.
+        # Simplified: $50k per year until retirement is a good target
+        target_balance = years_until_retirement * 50000
+        if retirement_balance >= target_balance:
+            long_term_security_score += 40
+        elif retirement_balance >= target_balance * 0.5:
+            long_term_security_score += 30
+        elif retirement_balance >= target_balance * 0.25:
+            long_term_security_score += 20
+        else:
+            long_term_security_score += 10
+    else:
+        long_term_security_score += 10
+    
+    if questionnaire_data.get('hasRetirementPlan'):
+        long_term_security_score += 20
+    
+    long_term_security_score = min(100, long_term_security_score)
+    
+    # Overall score is average of all pillars
+    overall_score = (
+        take_control_score +
+        prepare_unexpected_score +
+        goals_progress_score +
+        long_term_security_score
+    ) / 4
+    
+    # Define pillar details
+    def get_rating(score: float) -> str:
+        if score >= 80:
+            return "Excellent"
+        elif score >= 70:
+            return "Very Good"
+        elif score >= 60:
+            return "Good"
+        elif score >= 50:
+            return "Fair"
+        else:
+            return "Needs Improvement"
+    
+    pillars = [
+        {
+            "name": "Take Control of Finances",
+            "score": round(take_control_score, 1),
+            "rating": get_rating(take_control_score),
+            "description": "Measures day-to-day money management, including budgeting, spending habits, and saving rate.",
+            "improvementTip": "You're doing great! Continue maintaining your spending habits and savings rate." if take_control_score >= 80 else "Consider creating a monthly budget and tracking your spending to improve your financial control.",
+            "color": "#10B981"  # Green
+        },
+        {
+            "name": "Prepare for the Unexpected",
+            "score": round(prepare_unexpected_score, 1),
+            "rating": get_rating(prepare_unexpected_score),
+            "description": "Evaluates readiness for financial emergencies and unexpected expenses through emergency funds and insurance.",
+            "improvementTip": "Your emergency preparedness is excellent! Maintain your emergency fund and consider adequate insurance." if prepare_unexpected_score >= 80 else "Build an emergency fund covering 3-6 months of expenses and review your insurance coverage.",
+            "color": "#209DD7"  # Blue
+        },
+        {
+            "name": "Make Progress Toward Goals",
+            "score": round(goals_progress_score, 1),
+            "rating": get_rating(goals_progress_score),
+            "description": "Tracks progress toward defined financial goals, such as saving for a home or education.",
+            "improvementTip": "Set specific financial goals with clear timelines and create a plan to achieve them." if goals_progress_score < 70 else "Great progress! Keep tracking your goals and adjust your plan as needed.",
+            "color": "#FFB707"  # Yellow
+        },
+        {
+            "name": "Long-Term Security",
+            "score": round(long_term_security_score, 1),
+            "rating": get_rating(long_term_security_score),
+            "description": "Assesses readiness for retirement and long-term financial stability through investments and retirement planning.",
+            "improvementTip": "Review your retirement strategy to ensure you're on track for your desired retirement age." if long_term_security_score < 80 else "Excellent retirement planning! Continue contributing regularly to your retirement accounts.",
+            "color": "#753991"  # Purple
+        }
+    ]
+    
+    return {
+        "overall_score": round(overall_score, 1),
+        "take_control_score": round(take_control_score, 1),
+        "prepare_unexpected_score": round(prepare_unexpected_score, 1),
+        "goals_progress_score": round(goals_progress_score, 1),
+        "long_term_security_score": round(long_term_security_score, 1),
+        "pillars": pillars
+    }
+
+@app.post("/api/wellness/questionnaire")
+async def submit_wellness_questionnaire(
+    data: WellnessQuestionnaireRequest,
+    clerk_user_id: str = Depends(get_current_user_id)
+):
+    """Submit wellness questionnaire and calculate scores"""
+    try:
+        # Convert to database format
+        questionnaire_data = {
+            "clerk_user_id": clerk_user_id,
+            "monthly_income": Decimal(str(data.monthlyIncome)) if data.monthlyIncome else None,
+            "monthly_expenses": Decimal(str(data.monthlyExpenses)) if data.monthlyExpenses else None,
+            "savings_rate": Decimal(str(data.savingsRate)) if data.savingsRate else None,
+            "has_budget": data.hasBudget or False,
+            "tracks_spending": data.tracksSpending or False,
+            "emergency_fund_months": Decimal(str(data.emergencyFundMonths)) if data.emergencyFundMonths else None,
+            "has_health_insurance": data.hasHealthInsurance or False,
+            "has_life_insurance": data.hasLifeInsurance or False,
+            "has_disability_insurance": data.hasDisabilityInsurance or False,
+            "has_financial_goals": data.hasFinancialGoals or False,
+            "goal_types": json.dumps(data.goalTypes or []),
+            "goal_timeline": data.goalTimeline,
+            "progress_on_goals": Decimal(str(data.progressOnGoals)) if data.progressOnGoals else None,
+            "retirement_account_balance": Decimal(str(data.retirementAccountBalance)) if data.retirementAccountBalance else None,
+            "retirement_contribution_rate": Decimal(str(data.retirementContributionRate)) if data.retirementContributionRate else None,
+            "has_retirement_plan": data.hasRetirementPlan or False,
+            "years_until_retirement": data.yearsUntilRetirement,
+        }
+        
+        # Remove None values for database
+        questionnaire_data = {k: v for k, v in questionnaire_data.items() if v is not None}
+        
+        # Check if questionnaire exists
+        existing = db.client.query_one(
+            "SELECT id FROM wellness_questionnaire WHERE clerk_user_id = :user_id",
+            db.client._build_parameters({'user_id': clerk_user_id})
+        )
+        
+        if existing:
+            # Update existing questionnaire
+            db.client.update(
+                "wellness_questionnaire",
+                questionnaire_data,
+                "clerk_user_id = :user_id",
+                {'user_id': clerk_user_id}
+            )
+            questionnaire_id = existing['id']
+        else:
+            # Insert new questionnaire
+            questionnaire_id = db.client.insert(
+                "wellness_questionnaire",
+                questionnaire_data,
+                returning="id"
+            )
+        
+        # Calculate scores
+        scores_data = calculate_wellness_scores({
+            "savingsRate": float(data.savingsRate) if data.savingsRate else None,
+            "hasBudget": data.hasBudget,
+            "tracksSpending": data.tracksSpending,
+            "emergencyFundMonths": float(data.emergencyFundMonths) if data.emergencyFundMonths else None,
+            "hasHealthInsurance": data.hasHealthInsurance,
+            "hasLifeInsurance": data.hasLifeInsurance,
+            "hasDisabilityInsurance": data.hasDisabilityInsurance,
+            "hasFinancialGoals": data.hasFinancialGoals,
+            "goalTypes": data.goalTypes or [],
+            "progressOnGoals": float(data.progressOnGoals) if data.progressOnGoals else None,
+            "retirementAccountBalance": float(data.retirementAccountBalance) if data.retirementAccountBalance else None,
+            "retirementContributionRate": float(data.retirementContributionRate) if data.retirementContributionRate else None,
+            "hasRetirementPlan": data.hasRetirementPlan,
+            "yearsUntilRetirement": data.yearsUntilRetirement,
+        })
+        
+        # Save scores
+        scores_db_data = {
+            "clerk_user_id": clerk_user_id,
+            "questionnaire_id": questionnaire_id,
+            "overall_score": Decimal(str(scores_data["overall_score"])),
+            "take_control_score": Decimal(str(scores_data["take_control_score"])),
+            "prepare_unexpected_score": Decimal(str(scores_data["prepare_unexpected_score"])),
+            "goals_progress_score": Decimal(str(scores_data["goals_progress_score"])),
+            "long_term_security_score": Decimal(str(scores_data["long_term_security_score"])),
+            "pillar_details": json.dumps(scores_data["pillars"]),
+        }
+        
+        # Check if score exists
+        existing_score = db.client.query_one(
+            "SELECT id FROM wellness_scores WHERE clerk_user_id = :user_id",
+            db.client._build_parameters({'user_id': clerk_user_id})
+        )
+        
+        if existing_score:
+            # Update existing score
+            db.client.update(
+                "wellness_scores",
+                scores_db_data,
+                "clerk_user_id = :user_id",
+                {'user_id': clerk_user_id}
+            )
+        else:
+            # Insert new score
+            db.client.insert(
+                "wellness_scores",
+                scores_db_data
+            )
+        
+        return {
+            "message": "Questionnaire submitted successfully",
+            "overall_score": scores_data["overall_score"],
+            "pillars": scores_data["pillars"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error submitting wellness questionnaire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/wellness/score")
+async def get_wellness_score(clerk_user_id: str = Depends(get_current_user_id)):
+    """Get the user's wellness score"""
+    try:
+        score_data = db.client.query_one(
+            "SELECT * FROM wellness_scores WHERE clerk_user_id = :user_id",
+            db.client._build_parameters({'user_id': clerk_user_id})
+        )
+        
+        if not score_data:
+            raise HTTPException(status_code=404, detail="Wellness score not found. Please complete the questionnaire first.")
+        
+        pillars = json.loads(score_data.get("pillar_details", "[]"))
+        
+        # Format updated_at timestamp
+        updated_at = score_data.get("updated_at")
+        if isinstance(updated_at, datetime):
+            last_updated = updated_at.isoformat()
+        elif isinstance(updated_at, str):
+            last_updated = updated_at
+        else:
+            last_updated = str(updated_at)
+        
+        return {
+            "overallScore": float(score_data["overall_score"]),
+            "pillars": pillars,
+            "lastUpdated": last_updated
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting wellness score: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Lambda handler
