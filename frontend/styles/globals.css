@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./vanguard-design-system.css";
 
 :root {
   --background: #ffffff;
@@ -6,26 +7,46 @@
 }
 
 @theme inline {
-  /* Custom colors for Samy Financial Advisor */
-  --color-primary: #209DD7;        /* Primary blue */
+  /* Vanguard Design System Colors - mapped to Tailwind */
+  --color-primary: var(--vanguard-red);
+  --color-primary-dark: var(--vanguard-red-dark);
+  --color-primary-light: var(--vanguard-red-light);
+  --color-vanguard-red: var(--vanguard-red);
+  --color-vanguard-yellow: var(--vanguard-yellow);
+  --color-vanguard-gray: var(--vanguard-gray-text);
   --color-ai-accent: #753991;      /* Purple for AI/agent features */
-  --color-accent: #FFB707;         /* Yellow/gold accent */
-  --color-dark: #062147;           /* Dark navy */
-  --color-success: #10b981;        /* Green for positive */
-  --color-error: #ef4444;          /* Red for errors */
+  --color-accent: var(--vanguard-yellow);
+  --color-dark: var(--vanguard-red-dark);
+  --color-success: var(--vanguard-success);
+  --color-error: var(--vanguard-red);
+  
+  /* Text and background colors */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-bg-light: var(--bg-secondary);
+  --color-bg-white: var(--bg-primary);
+  --color-border: var(--border-light);
   
   /* Preserve defaults */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-primary);
+  --font-mono: var(--font-mono);
 }
 
-/* Light mode only - no dark mode for enterprise look */
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+/* Vanguard Design System is now imported from vanguard-design-system.css */
+/* Additional overrides and custom styles below */
+
+/* MoneyMind-style colors - professional financial wellness look */
+:root {
+  --moneymind-primary: #062147;  /* Dark navy for headers */
+  --moneymind-accent: #FFD700;    /* Gold accent */
+  --moneymind-blue: #209DD7;      /* Primary blue */
+  --moneymind-green: #10B981;    /* Success green */
+  --moneymind-gray-bg: #F9F9F9;  /* Light gray background */
+  --moneymind-gray-text: #4B5563; /* Medium gray text */
+  --moneymind-border: #E5E7EB;    /* Light border */
 }
 
 /* Stronger pulsing animation for agent activity */

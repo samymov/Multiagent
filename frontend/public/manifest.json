@@ -1,8 +1,8 @@
 {
-  "name": "Samy AI Financial Advisor",
-  "short_name": "Samy AI",
+  "name": "Vanguard AI Financial Wellbeing",
+  "short_name": "Vanguard AI",
   "description": "AI-powered financial planning and portfolio management",
-  "theme_color": "#209DD7",
+  "theme_color": "#3C4651",
   "background_color": "#ffffff",
   "display": "standalone",
   "scope": "/",

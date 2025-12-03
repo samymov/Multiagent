@@ -9,7 +9,8 @@ export default function Document() {
         <link rel="apple-touch-icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="description" content="Samy AI Financial Advisor - Your intelligent portfolio management assistant" />
-        <meta name="theme-color" content="#209DD7" />
+        <meta name="theme-color" content="#BA0C2F" />
+        {/* Vanguard uses system fonts for optimal performance and consistency */}
       </Head>
       <body className="antialiased">
         <Main />

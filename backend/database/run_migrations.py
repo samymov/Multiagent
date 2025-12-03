@@ -4,6 +4,7 @@ Simple migration runner that executes statements one by one
 """
 
 import os
+import re
 import boto3
 from pathlib import Path
 from botocore.exceptions import ClientError
@@ -23,12 +24,8 @@ if not cluster_arn or not secret_arn:
 
 client = boto3.client("rds-data", region_name=region)
 
-# Read migration file
-with open("migrations/001_schema.sql") as f:
-    sql = f.read()
-
-# Define statements in order (since splitting is complex)
-statements = [
+# Define statements from 001_schema.sql in order (since splitting is complex)
+schema_statements = [
     # Extension
     'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"',
     # Tables
@@ -115,6 +112,36 @@ statements = [
     """CREATE TRIGGER update_jobs_updated_at BEFORE UPDATE ON jobs
         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()""",
 ]
+
+# Read and parse 002_wellness.sql
+wellness_statements = []
+wellness_file = Path("migrations/002_wellness.sql")
+if wellness_file.exists():
+    print("📄 Reading 002_wellness.sql...")
+    with open(wellness_file) as f:
+        wellness_sql = f.read()
+    
+    # Remove comment lines (lines starting with --)
+    lines = []
+    for line in wellness_sql.split('\n'):
+        stripped = line.strip()
+        if not stripped.startswith('--'):
+            lines.append(line)
+    cleaned_sql = '\n'.join(lines)
+    
+    # Split on semicolon followed by newline or whitespace+newline
+    # This handles CREATE TABLE statements that span multiple lines
+    parts = re.split(r';\s*\n', cleaned_sql)
+    
+    for part in parts:
+        part = part.strip()
+        if part:
+            wellness_statements.append(part)
+else:
+    print("⚠️  Migration file migrations/002_wellness.sql not found, skipping wellness tables...")
+
+# Combine all statements
+statements = schema_statements + wellness_statements
 
 print("🚀 Running database migrations...")
 print("=" * 50)

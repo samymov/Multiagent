@@ -146,14 +146,24 @@ class DataAPIClient:
 
         # Check if columns need type casting
         for col in columns:
-            if isinstance(data[col], (dict, list)):
-                placeholders.append(f":{col}::jsonb")
-            elif isinstance(data[col], Decimal):
+            value = data[col]
+            # Convert to string if it's not already, for UUID detection
+            if value is not None and not isinstance(value, (dict, list, Decimal, date, datetime)):
+                value_str = str(value)
+            else:
+                value_str = None
+            
+            if isinstance(value, (dict, list)):
+                placeholders.append(f"CAST(:{col} AS jsonb)")
+            elif isinstance(value, Decimal):
                 placeholders.append(f":{col}::numeric")
-            elif isinstance(data[col], date) and not isinstance(data[col], datetime):
+            elif isinstance(value, date) and not isinstance(value, datetime):
                 placeholders.append(f":{col}::date")
-            elif isinstance(data[col], datetime):
+            elif isinstance(value, datetime):
                 placeholders.append(f":{col}::timestamp")
+            elif col == 'questionnaire_id' or (value_str and (col.endswith('_id') or col == 'id') and self._is_uuid_string(value_str)):
+                # Cast UUID strings to UUID type (always cast questionnaire_id)
+                placeholders.append(f"CAST(:{col} AS uuid)")
             else:
                 placeholders.append(f":{col}")
 
@@ -191,13 +201,16 @@ class DataAPIClient:
         set_parts = []
         for col, val in data.items():
             if isinstance(val, (dict, list)):
-                set_parts.append(f"{col} = :{col}::jsonb")
+                set_parts.append(f"{col} = CAST(:{col} AS jsonb)")
             elif isinstance(val, Decimal):
                 set_parts.append(f"{col} = :{col}::numeric")
             elif isinstance(val, date) and not isinstance(val, datetime):
                 set_parts.append(f"{col} = :{col}::date")
             elif isinstance(val, datetime):
                 set_parts.append(f"{col} = :{col}::timestamp")
+            elif col == 'questionnaire_id' or (isinstance(val, str) and (col.endswith('_id') or col == 'id') and self._is_uuid_string(val)):
+                # Cast UUID strings to UUID type (always cast questionnaire_id)
+                set_parts.append(f"{col} = CAST(:{col} AS uuid)")
             else:
                 set_parts.append(f"{col} = :{col}")
 
@@ -308,3 +321,15 @@ class DataAPIClient:
             return field["blobValue"]
         else:
             return None
+    
+    def _is_uuid_string(self, value: str) -> bool:
+        """Check if a string is a valid UUID format"""
+        if not isinstance(value, str):
+            return False
+        # UUID format: 8-4-4-4-12 hexadecimal characters
+        import re
+        uuid_pattern = re.compile(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+            re.IGNORECASE
+        )
+        return bool(uuid_pattern.match(value))

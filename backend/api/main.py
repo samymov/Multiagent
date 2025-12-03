@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 import boto3
+from botocore.exceptions import ClientError
 from mangum import Mangum
 from dotenv import load_dotenv
 from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCredentials
@@ -28,6 +29,13 @@ from src.schemas import (
     JobCreate, JobUpdate,
     JobType, JobStatus
 )
+# Import CFPB scoring module
+import sys
+from pathlib import Path
+api_dir = Path(__file__).parent
+if str(api_dir) not in sys.path:
+    sys.path.insert(0, str(api_dir))
+from cfpb_scoring import calculate_cfpb_score, get_cfpb_rating
 
 # Load environment variables
 load_dotenv(override=True)
@@ -67,6 +75,7 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTP exceptions with improved messages"""
     # Map technical errors to user-friendly messages
+    # But preserve custom messages if they're already user-friendly
     user_friendly_messages = {
         401: "Your session has expired. Please sign in again.",
         403: "You don't have permission to access this resource.",
@@ -76,7 +85,17 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         503: "The service is temporarily unavailable. Please try again later."
     }
 
-    message = user_friendly_messages.get(exc.status_code, exc.detail)
+    # If the detail already contains helpful information (like migration instructions),
+    # use it instead of the generic message
+    if exc.detail and (
+        "migration" in exc.detail.lower() or 
+        "database" in exc.detail.lower() or
+        len(exc.detail) > 50  # Custom messages are usually longer
+    ):
+        message = exc.detail
+    else:
+        message = user_friendly_messages.get(exc.status_code, exc.detail)
+    
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": message}
@@ -763,27 +782,22 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
         logger.error(f"Error populating test data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Wellness Questionnaire Models
+# Wellness Questionnaire Models - CFPB Financial Well-Being Scale
 class WellnessQuestionnaireRequest(BaseModel):
-    monthlyIncome: Optional[float] = None
-    monthlyExpenses: Optional[float] = None
-    savingsRate: Optional[float] = None
-    hasBudget: Optional[bool] = None
-    tracksSpending: Optional[bool] = None
-    emergencyFundMonths: Optional[float] = None
-    hasHealthInsurance: Optional[bool] = None
-    hasLifeInsurance: Optional[bool] = None
-    hasDisabilityInsurance: Optional[bool] = None
-    hasFinancialGoals: Optional[bool] = None
-    goalTypes: Optional[List[str]] = None
-    goalTimeline: Optional[str] = None
-    progressOnGoals: Optional[float] = None
-    retirementAccountBalance: Optional[float] = None
-    retirementContributionRate: Optional[float] = None
-    hasRetirementPlan: Optional[bool] = None
-    yearsUntilRetirement: Optional[int] = None
+    """New questionnaire format matching Streamlit questions"""
+    age: str
+    employment_status: str
+    retirement_plan: str
+    financial_goals: List[str]
+    income_spending: str
+    emergency_savings: str
+    savings_cover: str
+    debts: List[str]
+    accounts: List[str]
+    financial_confidence: str
+    advisor: str
 
-def calculate_wellness_scores(questionnaire_data: dict) -> dict:
+def calculate_wellness_scores_old(questionnaire_data: dict) -> dict:
     """Calculate wellness scores based on questionnaire responses"""
     
     # Pillar 1: Take Control of Finances (0-100)
@@ -949,130 +963,581 @@ def calculate_wellness_scores(questionnaire_data: dict) -> dict:
         "pillars": pillars
     }
 
+# Scoring functions matching Streamlit code
+def score_take_control(responses: dict) -> float:
+    """Calculate Take Control of Finances score (0-100)"""
+    score = 0
+    
+    spending = responses.get("income_spending", "")
+    if spending == "I usually spend less than I earn":
+        score += 40
+    elif spending == "I usually spend as much as I earn":
+        score += 25
+    else:
+        score += 10
+    
+    debts = responses.get("debts", [])
+    if "None" in debts:
+        score += 40
+    elif len(debts) <= 2:
+        score += 25
+    else:
+        score += 10
+    
+    goals = responses.get("financial_goals", [])
+    if "Paying my bills" in goals:
+        score += 10
+    if "Catching up after a late payment" in goals:
+        score += 5
+    
+    return min(score, 100)
+
+def score_prepare_unexpected(responses: dict) -> float:
+    """Calculate Prepare for the Unexpected score (0-100)"""
+    score = 0
+    
+    emergency = responses.get("emergency_savings", "")
+    if emergency == "Entirely":
+        score += 50
+    elif emergency == "Confident":
+        score += 30
+    else:
+        score += 10
+    
+    cover = responses.get("savings_cover", "")
+    if cover == "More than 6 months of expenses":
+        score += 50
+    elif cover == "From 4 to 6 months of expenses":
+        score += 30
+    elif cover == "From 1 to 3 months of expenses":
+        score += 15
+    elif cover == "Less than 1 month of expenses":
+        score += 5
+    else:
+        score += 0
+    
+    return min(score, 100)
+
+def score_progress_goals(responses: dict) -> float:
+    """Calculate Make Progress Toward Goals score (0-100)"""
+    score = 0
+    
+    goals = responses.get("financial_goals", [])
+    for g in ["Saving for retirement", "Saving for education", "Saving for health care", "Saving for a big purchase, like a house or car"]:
+        if g in goals:
+            score += 15
+    
+    accounts = responses.get("accounts", [])
+    score += min(len(accounts) * 5, 20)  # up to 20 points for accounts
+    
+    return min(score, 100)
+
+def score_long_term_security(responses: dict) -> float:
+    """Calculate Long-Term Security score (0-100)"""
+    score = 0
+    
+    retirement = responses.get("retirement_plan", "")
+    if retirement == "more than 5 years from now":
+        score += 40
+    else:
+        score += 20
+    
+    accounts = responses.get("accounts", [])
+    if "Individual Retirement Account (IRA)" in accounts:
+        score += 20
+    if "Employer retirement plan" in accounts:
+        score += 20
+    if "General Investing" in accounts:
+        score += 20
+    
+    return min(score, 100)
+
 @app.post("/api/wellness/questionnaire")
 async def submit_wellness_questionnaire(
     data: WellnessQuestionnaireRequest,
     clerk_user_id: str = Depends(get_current_user_id)
 ):
-    """Submit wellness questionnaire and calculate scores"""
+    """Submit wellness questionnaire and calculate scores using Streamlit scoring logic"""
     try:
-        # Convert to database format
-        questionnaire_data = {
-            "clerk_user_id": clerk_user_id,
-            "monthly_income": Decimal(str(data.monthlyIncome)) if data.monthlyIncome else None,
-            "monthly_expenses": Decimal(str(data.monthlyExpenses)) if data.monthlyExpenses else None,
-            "savings_rate": Decimal(str(data.savingsRate)) if data.savingsRate else None,
-            "has_budget": data.hasBudget or False,
-            "tracks_spending": data.tracksSpending or False,
-            "emergency_fund_months": Decimal(str(data.emergencyFundMonths)) if data.emergencyFundMonths else None,
-            "has_health_insurance": data.hasHealthInsurance or False,
-            "has_life_insurance": data.hasLifeInsurance or False,
-            "has_disability_insurance": data.hasDisabilityInsurance or False,
-            "has_financial_goals": data.hasFinancialGoals or False,
-            "goal_types": json.dumps(data.goalTypes or []),
-            "goal_timeline": data.goalTimeline,
-            "progress_on_goals": Decimal(str(data.progressOnGoals)) if data.progressOnGoals else None,
-            "retirement_account_balance": Decimal(str(data.retirementAccountBalance)) if data.retirementAccountBalance else None,
-            "retirement_contribution_rate": Decimal(str(data.retirementContributionRate)) if data.retirementContributionRate else None,
-            "has_retirement_plan": data.hasRetirementPlan or False,
-            "years_until_retirement": data.yearsUntilRetirement,
+        # Validate required fields
+        if not data.age or not data.age.strip():
+            raise HTTPException(status_code=422, detail="Age is required")
+        if not data.employment_status or not data.employment_status.strip():
+            raise HTTPException(status_code=422, detail="Employment status is required")
+        if not data.retirement_plan or not data.retirement_plan.strip():
+            raise HTTPException(status_code=422, detail="Retirement plan is required")
+        if not data.financial_goals or len(data.financial_goals) == 0:
+            raise HTTPException(status_code=422, detail="At least one financial goal is required")
+        if not data.income_spending or not data.income_spending.strip():
+            raise HTTPException(status_code=422, detail="Income spending information is required")
+        if not data.emergency_savings or not data.emergency_savings.strip():
+            raise HTTPException(status_code=422, detail="Emergency savings information is required")
+        if not data.savings_cover or not data.savings_cover.strip():
+            raise HTTPException(status_code=422, detail="Savings cover information is required")
+        if not data.debts or len(data.debts) == 0:
+            raise HTTPException(status_code=422, detail="At least one debt type is required (or select 'None')")
+        if not data.accounts or len(data.accounts) == 0:
+            raise HTTPException(status_code=422, detail="At least one account type is required (or select 'None of the above')")
+        if not data.financial_confidence or not data.financial_confidence.strip():
+            raise HTTPException(status_code=422, detail="Financial confidence is required")
+        if not data.advisor or not data.advisor.strip():
+            raise HTTPException(status_code=422, detail="Advisor information is required")
+        
+        # Convert to dict for scoring functions
+        responses = {
+            "age": data.age.strip(),
+            "employment_status": data.employment_status.strip(),
+            "retirement_plan": data.retirement_plan.strip(),
+            "financial_goals": data.financial_goals,
+            "income_spending": data.income_spending.strip(),
+            "emergency_savings": data.emergency_savings.strip(),
+            "savings_cover": data.savings_cover.strip(),
+            "debts": data.debts,
+            "accounts": data.accounts,
+            "financial_confidence": data.financial_confidence.strip(),
+            "advisor": data.advisor.strip(),
         }
         
-        # Remove None values for database
-        questionnaire_data = {k: v for k, v in questionnaire_data.items() if v is not None}
+        # Calculate pillar scores
+        take_control = score_take_control(responses)
+        prepare_unexpected = score_prepare_unexpected(responses)
+        progress_goals = score_progress_goals(responses)
+        long_term_security = score_long_term_security(responses)
         
-        # Check if questionnaire exists
-        existing = db.client.query_one(
-            "SELECT id FROM wellness_questionnaire WHERE clerk_user_id = :user_id",
-            db.client._build_parameters({'user_id': clerk_user_id})
-        )
+        # Overall score is average of all pillars
+        overall_score = (take_control + prepare_unexpected + progress_goals + long_term_security) / 4
         
-        if existing:
-            # Update existing questionnaire
-            db.client.update(
-                "wellness_questionnaire",
-                questionnaire_data,
-                "clerk_user_id = :user_id",
-                {'user_id': clerk_user_id}
-            )
-            questionnaire_id = existing['id']
-        else:
-            # Insert new questionnaire
-            questionnaire_id = db.client.insert(
-                "wellness_questionnaire",
-                questionnaire_data,
-                returning="id"
-            )
+        # Define pillar details with ratings and colors matching Streamlit code
+        def get_rating(score: float) -> str:
+            """Get rating based on score: Excellent (80+), Good (60-79), Fair (40-59), Poor (<40)"""
+            if score >= 80:
+                return "Excellent"
+            elif score >= 60:
+                return "Good"
+            elif score >= 40:
+                return "Fair"
+            else:
+                return "Poor"
         
-        # Calculate scores
-        scores_data = calculate_wellness_scores({
-            "savingsRate": float(data.savingsRate) if data.savingsRate else None,
-            "hasBudget": data.hasBudget,
-            "tracksSpending": data.tracksSpending,
-            "emergencyFundMonths": float(data.emergencyFundMonths) if data.emergencyFundMonths else None,
-            "hasHealthInsurance": data.hasHealthInsurance,
-            "hasLifeInsurance": data.hasLifeInsurance,
-            "hasDisabilityInsurance": data.hasDisabilityInsurance,
-            "hasFinancialGoals": data.hasFinancialGoals,
-            "goalTypes": data.goalTypes or [],
-            "progressOnGoals": float(data.progressOnGoals) if data.progressOnGoals else None,
-            "retirementAccountBalance": float(data.retirementAccountBalance) if data.retirementAccountBalance else None,
-            "retirementContributionRate": float(data.retirementContributionRate) if data.retirementContributionRate else None,
-            "hasRetirementPlan": data.hasRetirementPlan,
-            "yearsUntilRetirement": data.yearsUntilRetirement,
-        })
+        def get_rating_color(rating: str) -> str:
+            """Get color for rating"""
+            colors = {
+                "Excellent": "#2E7D32",  # Green
+                "Good": "#1976D2",       # Blue
+                "Fair": "#F9A825",       # Yellow
+                "Poor": "#D32F2F"        # Red
+            }
+            return colors.get(rating, "#888")
+        
+        def get_bg_color(rating: str) -> str:
+            """Get background color for pillar card"""
+            colors = {
+                "Excellent": "#E6F4EA",  # Light green
+                "Good": "#E6F4FA",       # Light blue
+                "Fair": "#FFF7E6",       # Light yellow
+                "Poor": "#FFEBEE"        # Light red
+            }
+            return colors.get(rating, "#F5F5F5")
+        
+        # Pillar descriptions and tips matching Streamlit code
+        pillar_descriptions = {
+            "Take Control of Finances": "This score measures how well you manage your money day-to-day, including budgeting, spending habits, and saving rate.",
+            "Prepare for the Unexpected": "This score evaluates your readiness for financial emergencies and unexpected expenses through emergency funds and insurance.",
+            "Progress Toward Goals": "This score tracks how well you're progressing toward your defined financial goals, such as saving for a home or education.",
+            "Long-Term Security": "This score assesses your readiness for retirement and long-term financial stability through investments and retirement planning.",
+        }
+        
+        pillar_tips = {
+            "Take Control of Finances": "You're doing great! Continue maintaining your spending habits and savings rate.",
+            "Prepare for the Unexpected": "Your emergency preparedness is excellent! Maintain your emergency fund and consider adequate insurance.",
+            "Progress Toward Goals": "Set specific financial goals with clear timelines and create a plan to achieve them.",
+            "Long-Term Security": "Review your retirement strategy to ensure you're on track for your desired retirement age.",
+        }
+        
+        # Create pillars array with proper formatting
+        pillars = [
+            {
+                "name": "Take Control of Finances",
+                "score": round(take_control, 1),
+                "rating": get_rating(take_control),
+                "description": pillar_descriptions["Take Control of Finances"],
+                "improvementTip": pillar_tips["Take Control of Finances"],
+                "color": get_rating_color(get_rating(take_control)),
+                "bgColor": get_bg_color(get_rating(take_control))
+            },
+            {
+                "name": "Prepare for the Unexpected",
+                "score": round(prepare_unexpected, 1),
+                "rating": get_rating(prepare_unexpected),
+                "description": pillar_descriptions["Prepare for the Unexpected"],
+                "improvementTip": pillar_tips["Prepare for the Unexpected"],
+                "color": get_rating_color(get_rating(prepare_unexpected)),
+                "bgColor": get_bg_color(get_rating(prepare_unexpected))
+            },
+            {
+                "name": "Progress Toward Goals",
+                "score": round(progress_goals, 1),
+                "rating": get_rating(progress_goals),
+                "description": pillar_descriptions["Progress Toward Goals"],
+                "improvementTip": pillar_tips["Progress Toward Goals"],
+                "color": get_rating_color(get_rating(progress_goals)),
+                "bgColor": get_bg_color(get_rating(progress_goals))
+            },
+            {
+                "name": "Long-Term Security",
+                "score": round(long_term_security, 1),
+                "rating": get_rating(long_term_security),
+                "description": pillar_descriptions["Long-Term Security"],
+                "improvementTip": pillar_tips["Long-Term Security"],
+                "color": get_rating_color(get_rating(long_term_security)),
+                "bgColor": get_bg_color(get_rating(long_term_security))
+            }
+        ]
+        
+        # Save questionnaire to database (convert to JSON for storage)
+        try:
+            # Validate age can be converted to int
+            age_int = None
+            if data.age.strip().isdigit():
+                age_int = int(data.age.strip())
+            elif data.age.strip():
+                raise HTTPException(status_code=422, detail=f"Invalid age value: {data.age}")
+            
+            questionnaire_data = {
+                "clerk_user_id": clerk_user_id,
+                "age": age_int,
+                "questionnaire_responses": responses,  # Store as dict - database client will cast to JSONB
+            }
+            
+            logger.info(f"Saving questionnaire for user {clerk_user_id}")
+            
+            # Check if questionnaire exists
+            try:
+                existing = db.client.query_one(
+                    "SELECT id FROM wellness_questionnaire WHERE clerk_user_id = :user_id",
+                    db.client._build_parameters({'user_id': clerk_user_id})
+                )
+            except ClientError as query_error:
+                error_code = query_error.response.get('Error', {}).get('Code', '')
+                error_msg = query_error.response.get('Error', {}).get('Message', str(query_error))
+                logger.error(f"Database ClientError - Code: {error_code}, Message: {error_msg}")
+                
+                if "does not exist" in error_msg or "relation" in error_msg.lower() or "wellness_questionnaire" in error_msg.lower() or error_code == "BadRequestException":
+                    logger.error(f"Database table wellness_questionnaire does not exist: {error_msg}")
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Wellness feature not available. Database migration required. Please run: cd backend/database && uv run run_migrations.py"
+                    )
+                raise HTTPException(status_code=500, detail=f"Database query error: {error_msg}")
+            except Exception as query_error:
+                error_msg = str(query_error)
+                error_type = type(query_error).__name__
+                logger.error(f"Database query error - Type: {error_type}, Error: {error_msg}")
+                
+                if "does not exist" in error_msg or "relation" in error_msg.lower() or "wellness_questionnaire" in error_msg.lower():
+                    logger.error(f"Database table wellness_questionnaire does not exist: {error_msg}")
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Database migration required: The wellness_questionnaire table does not exist. Please run the database migration: cd backend/database && uv run run_migrations.py"
+                    )
+                raise
+            
+            if existing:
+                # Update existing questionnaire
+                logger.info(f"Updating existing questionnaire for user {clerk_user_id}")
+                db.client.update(
+                    "wellness_questionnaire",
+                    questionnaire_data,
+                    "clerk_user_id = :user_id",
+                    {'user_id': clerk_user_id}
+                )
+                questionnaire_id = str(existing['id'])  # Ensure it's a string UUID
+            else:
+                # Insert new questionnaire
+                logger.info(f"Inserting new questionnaire for user {clerk_user_id}")
+                questionnaire_id = str(db.client.insert(
+                    "wellness_questionnaire",
+                    questionnaire_data,
+                    returning="id"
+                ))  # Ensure it's a string UUID
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
+        except Exception as db_error:
+            error_msg = str(db_error)
+            error_type = type(db_error).__name__
+            logger.error(f"Database error saving questionnaire - Type: {error_type}, Error: {error_msg}", exc_info=True)
+            
+            if "does not exist" in error_msg or "relation" in error_msg.lower() or "wellness_questionnaire" in error_msg.lower():
+                raise HTTPException(
+                    status_code=503,
+                    detail="Wellness feature not available. Database migration required. Please run: cd backend/database && uv run run_migrations.py"
+                )
+            raise HTTPException(status_code=500, detail=f"Database error: {error_msg}")
         
         # Save scores
-        scores_db_data = {
-            "clerk_user_id": clerk_user_id,
-            "questionnaire_id": questionnaire_id,
-            "overall_score": Decimal(str(scores_data["overall_score"])),
-            "take_control_score": Decimal(str(scores_data["take_control_score"])),
-            "prepare_unexpected_score": Decimal(str(scores_data["prepare_unexpected_score"])),
-            "goals_progress_score": Decimal(str(scores_data["goals_progress_score"])),
-            "long_term_security_score": Decimal(str(scores_data["long_term_security_score"])),
-            "pillar_details": json.dumps(scores_data["pillars"]),
-        }
+        try:
+            # Ensure questionnaire_id is a string UUID
+            questionnaire_id_str = str(questionnaire_id) if questionnaire_id else None
+            
+            scores_db_data = {
+                "clerk_user_id": clerk_user_id,
+                "questionnaire_id": questionnaire_id_str,  # Ensure it's a string for UUID detection
+                "overall_score": Decimal(str(round(overall_score, 1))),
+                "take_control_score": Decimal(str(round(take_control, 1))),
+                "prepare_unexpected_score": Decimal(str(round(prepare_unexpected, 1))),
+                "goals_progress_score": Decimal(str(round(progress_goals, 1))),
+                "long_term_security_score": Decimal(str(round(long_term_security, 1))),
+                "pillar_details": pillars,  # Store as dict - database client will cast to JSONB
+            }
+            
+            logger.info(f"Saving wellness scores for user {clerk_user_id}, questionnaire_id: {questionnaire_id}")
+            
+            # Check if score exists
+            try:
+                existing_score = db.client.query_one(
+                    "SELECT id FROM wellness_scores WHERE clerk_user_id = :user_id",
+                    db.client._build_parameters({'user_id': clerk_user_id})
+                )
+            except ClientError as query_error:
+                error_code = query_error.response.get('Error', {}).get('Code', '')
+                error_msg = query_error.response.get('Error', {}).get('Message', str(query_error))
+                logger.error(f"Database ClientError - Code: {error_code}, Message: {error_msg}")
+                
+                if "does not exist" in error_msg or "relation" in error_msg.lower() or "wellness_scores" in error_msg.lower() or error_code == "BadRequestException":
+                    logger.error(f"Database table wellness_scores does not exist: {error_msg}")
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Database migration required: The wellness_scores table does not exist. Please run the database migration: cd backend/database && uv run run_migrations.py"
+                    )
+                raise HTTPException(status_code=500, detail=f"Database query error: {error_msg}")
+            except Exception as query_error:
+                error_msg = str(query_error)
+                error_type = type(query_error).__name__
+                logger.error(f"Database query error - Type: {error_type}, Error: {error_msg}")
+                
+                if "does not exist" in error_msg or "relation" in error_msg.lower() or "wellness_scores" in error_msg.lower():
+                    logger.error(f"Database table wellness_scores does not exist: {error_msg}")
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Database migration required: The wellness_scores table does not exist. Please run the database migration: cd backend/database && uv run run_migrations.py"
+                    )
+                raise
+            
+            if existing_score:
+                # Update existing score
+                logger.info(f"Updating existing wellness score for user {clerk_user_id}")
+                db.client.update(
+                    "wellness_scores",
+                    scores_db_data,
+                    "clerk_user_id = :user_id",
+                    {'user_id': clerk_user_id}
+                )
+            else:
+                # Insert new score
+                logger.info(f"Inserting new wellness score for user {clerk_user_id}")
+                db.client.insert(
+                    "wellness_scores",
+                    scores_db_data
+                )
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
+        except Exception as db_error:
+            error_msg = str(db_error)
+            error_type = type(db_error).__name__
+            logger.error(f"Database error saving scores - Type: {error_type}, Error: {error_msg}", exc_info=True)
+            
+            if "does not exist" in error_msg or "relation" in error_msg.lower() or "wellness_scores" in error_msg.lower():
+                raise HTTPException(
+                    status_code=503,
+                    detail="Wellness feature not available. Database migration required. Please run: cd backend/database && uv run run_migrations.py"
+                )
+            raise HTTPException(status_code=500, detail=f"Database error saving scores: {error_msg}")
         
-        # Check if score exists
-        existing_score = db.client.query_one(
-            "SELECT id FROM wellness_scores WHERE clerk_user_id = :user_id",
-            db.client._build_parameters({'user_id': clerk_user_id})
-        )
+        # Calculate NBA recommendations
+        def get_nba_recommendations(responses: dict) -> list:
+            """Get Next Best Actions based on questionnaire responses"""
+            nba_map = {
+                "Saving for retirement": "MATCH_1_NBA_1",
+                "Reducing credit card debt": "DEBT_1_NBA_1",
+                "Preparing for emergencies": "ES_1_NBA_1",
+                "Paying off Student loans": "DEBT_1_NBA_3",
+                "Saving for health care": "ES_2_NBA_1",
+                "Saving for education": "ES_NBA_1",
+                "Saving for a big purchase, like a house or car": "CASHFLOW_1_NBA_1",
+                "Catching up after a late payment": "DEBT_1_NBA_4",
+                "Paying my bills": "CASHFLOW_1_NBA_1"
+            }
+            
+            recommended_nbas = []
+            for goal in responses.get("financial_goals", []):
+                nba = nba_map.get(goal)
+                if nba and nba not in recommended_nbas:
+                    recommended_nbas.append(nba)
+            
+            # Fallback to category-based NBAs if needed
+            if not recommended_nbas:
+                employment = responses.get("employment_status")
+                retirement_timing = responses.get("retirement_plan")
+                if employment == "Retired":
+                    recommended_nbas = ["CASHFLOW_1_NBA_1", "DEBT_1_NBA_1", "DEBT_1_NBA_4"]
+                elif retirement_timing == "in the next 5 years":
+                    recommended_nbas = ["CASHFLOW_1_NBA_1", "MATCH_1_NBA_1", "MATCH_1_NBA_3"]
+                else:
+                    recommended_nbas = ["CASHFLOW_1_NBA_1", "MATCH_1_NBA_1", "MATCH_1_NBA_3"]
+            
+            return recommended_nbas
         
-        if existing_score:
-            # Update existing score
-            db.client.update(
-                "wellness_scores",
-                scores_db_data,
-                "clerk_user_id = :user_id",
-                {'user_id': clerk_user_id}
-            )
-        else:
-            # Insert new score
-            db.client.insert(
-                "wellness_scores",
-                scores_db_data
-            )
+        def map_nba_to_agent(nba_code: str) -> dict:
+            """Map NBA code to agent route and information"""
+            # Map NBA codes to agents
+            nba_to_agent = {
+                "CASHFLOW_1_NBA_1": {
+                    "agent": "goal-solver",
+                    "name": "Goal Solver Agent",
+                    "icon": "💰",
+                    "description": "Set and achieve your financial goals"
+                },
+                "MATCH_1_NBA_1": {
+                    "agent": "retirement-planning",
+                    "name": "Retirement Planning Agent",
+                    "icon": "📈",
+                    "description": "Maximize your retirement savings"
+                },
+                "MATCH_1_NBA_3": {
+                    "agent": "retirement-planning",
+                    "name": "Retirement Planning Agent",
+                    "icon": "📈",
+                    "description": "Maximize your retirement savings"
+                },
+                "DEBT_1_NBA_1": {
+                    "agent": "goal-solver",
+                    "name": "Goal Solver Agent",
+                    "icon": "💳",
+                    "description": "Manage and reduce debt"
+                },
+                "DEBT_1_NBA_4": {
+                    "agent": "goal-solver",
+                    "name": "Goal Solver Agent",
+                    "icon": "💳",
+                    "description": "Manage and reduce debt"
+                },
+                "DEBT_1_NBA_3": {
+                    "agent": "goal-solver",
+                    "name": "Goal Solver Agent",
+                    "icon": "🎓",
+                    "description": "Pay off student loans"
+                },
+                "ES_1_NBA_1": {
+                    "agent": "emergency-savings",
+                    "name": "Emergency Savings Agent",
+                    "icon": "🛟",
+                    "description": "Build emergency savings"
+                },
+                "ES_2_NBA_1": {
+                    "agent": "emergency-savings",
+                    "name": "Emergency Savings Agent",
+                    "icon": "🛟",
+                    "description": "Build emergency savings"
+                },
+                "ES_NBA_1": {
+                    "agent": "goal-solver",
+                    "name": "Goal Solver Agent",
+                    "icon": "🎯",
+                    "description": "Set financial goals"
+                },
+                "SS_1_NBA_1": {
+                    "agent": "social-security",
+                    "name": "Social Security Agent",
+                    "icon": "🧓",
+                    "description": "Plan for Social Security benefits"
+                },
+                "RSP_2_NBA_1": {
+                    "agent": "social-security",
+                    "name": "Social Security Agent",
+                    "icon": "🏖️",
+                    "description": "Plan your retirement lifestyle"
+                }
+            }
+            
+            return nba_to_agent.get(nba_code, {
+                "agent": "goal-solver",
+                "name": "Goal Solver Agent",
+                "icon": "💰",
+                "description": "Get personalized financial guidance"
+            })
+        
+        # Get NBA recommendations
+        nba_codes = get_nba_recommendations(responses)
+        
+        # Map to agents and deduplicate
+        nba_recommendations = []
+        seen_agents = set()
+        for nba_code in nba_codes:
+            agent_info = map_nba_to_agent(nba_code)
+            agent_key = agent_info["agent"]
+            if agent_key not in seen_agents:
+                seen_agents.add(agent_key)
+                nba_recommendations.append({
+                    "nba_code": nba_code,
+                    "agent_route": f"/agents/{agent_info['agent']}",
+                    "agent_name": agent_info["name"],
+                    "icon": agent_info["icon"],
+                    "description": agent_info["description"]
+                })
         
         return {
             "message": "Questionnaire submitted successfully",
-            "overall_score": scores_data["overall_score"],
-            "pillars": scores_data["pillars"]
+            "overall_score": round(overall_score, 1),
+            "pillars": pillars,
+            "nba_recommendations": nba_recommendations
         }
         
+    except ValidationError as e:
+        logger.error(f"Validation error in wellness questionnaire: {e}", exc_info=True)
+        raise HTTPException(status_code=422, detail=f"Invalid questionnaire data: {str(e)}")
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is (these already have proper error messages)
+        raise
     except Exception as e:
-        logger.error(f"Error submitting wellness questionnaire: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error submitting wellness questionnaire: {e}", exc_info=True)
+        error_detail = str(e)
+        error_type = type(e).__name__
+        
+        # Check if it's a database-related error
+        if "does not exist" in error_detail or "relation" in error_detail.lower() or "wellness_questionnaire" in error_detail.lower() or "wellness_scores" in error_detail.lower():
+            error_detail = "Database tables not found. Please run database migrations: cd backend/database && uv run run_migrations.py"
+        elif "DatabaseErrorException" in error_type or "Database" in error_type:
+            error_detail = f"Database error: {error_detail}"
+        elif "KeyError" in error_type:
+            error_detail = f"Missing required data: {error_detail}"
+        elif "AttributeError" in error_type:
+            error_detail = f"Configuration error: {error_detail}"
+        
+        logger.error(f"Full error details - Type: {error_type}, Detail: {error_detail}")
+        logger.error(f"Full traceback:", exc_info=True)
+        raise HTTPException(status_code=500, detail=error_detail)
 
 @app.get("/api/wellness/score")
 async def get_wellness_score(clerk_user_id: str = Depends(get_current_user_id)):
     """Get the user's wellness score"""
     try:
-        score_data = db.client.query_one(
-            "SELECT * FROM wellness_scores WHERE clerk_user_id = :user_id",
-            db.client._build_parameters({'user_id': clerk_user_id})
-        )
+        # Check if table exists first (in case migration hasn't been run)
+        try:
+            score_data = db.client.query_one(
+                "SELECT * FROM wellness_scores WHERE clerk_user_id = :user_id",
+                db.client._build_parameters({'user_id': clerk_user_id})
+            )
+        except Exception as table_error:
+            error_msg = str(table_error)
+            if "does not exist" in error_msg or "relation" in error_msg.lower():
+                logger.error(f"Wellness scores table does not exist. Migration may not have been run: {error_msg}")
+                raise HTTPException(
+                    status_code=503, 
+                    detail="Database migration required: The wellness_scores table does not exist. Please run: cd backend/database && uv run run_migrations.py"
+                )
+            raise
         
         if not score_data:
             raise HTTPException(status_code=404, detail="Wellness score not found. Please complete the questionnaire first.")
@@ -1097,8 +1562,8 @@ async def get_wellness_score(clerk_user_id: str = Depends(get_current_user_id)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting wellness score: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting wellness score: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to load wellness score: {str(e)}")
 
 # Lambda handler
 handler = Mangum(app)

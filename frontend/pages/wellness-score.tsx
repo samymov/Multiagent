@@ -4,9 +4,8 @@ import { useUser, useAuth } from '@clerk/nextjs';
 import Layout from '../components/Layout';
 import WellnessScore from '../components/WellnessScore';
 import { API_URL } from '../lib/config';
-import { Skeleton, SkeletonCard } from '../components/Skeleton';
+import { SkeletonCard } from '../components/Skeleton';
 import { showToast } from '../components/Toast';
-import Head from 'next/head';
 
 interface PillarScore {
   name: string;
@@ -15,6 +14,7 @@ interface PillarScore {
   description: string;
   improvementTip: string;
   color: string;
+  bgColor?: string;
 }
 
 interface WellnessScoreData {
@@ -61,7 +61,8 @@ export default function WellnessScorePage() {
         }
 
         if (!response.ok) {
-          throw new Error('Failed to load wellness score');
+          const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          throw new Error(errorData.detail || `Failed to load wellness score (${response.status})`);
         }
 
         const data = await response.json();

@@ -23,68 +23,47 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </div>
     }>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5F5F5' }}>
         {/* Navigation */}
-        <nav className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
+        <nav className="header sticky">
+          <div className="container">
+            <div className="flex justify-between items-center" style={{ height: '64px' }}>
               {/* Logo and Brand */}
-              <div className="flex items-center gap-8">
-                <Link href="/dashboard" className="flex items-center">
-                  <h1 className="text-xl font-bold text-dark">
-                    Samy <span className="text-primary">AI Financial Advisor</span>
-                  </h1>
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard" className="flex items-center gap-3">
+                  <img 
+                    src="/vanguard-logo.svg" 
+                    alt="Vanguard" 
+                    className="logo"
+                  />
+                  <span className="text-lg font-semibold" style={{ color: 'var(--vanguard-red)', marginLeft: '12px' }}>
+                    AI Financial Wellbeing
+                  </span>
                 </Link>
 
                 {/* Navigation Links */}
                 <div className="hidden md:flex items-center gap-6">
                   <Link
                     href="/dashboard"
-                    className={`text-sm font-medium transition-colors ${
-                      isActive("/dashboard")
-                        ? "text-primary"
-                        : "text-gray-600 hover:text-primary"
-                    }`}
+                    className={`nav-link ${isActive("/dashboard") ? "active" : ""}`}
                   >
                     Dashboard
                   </Link>
                   <Link
                     href="/accounts"
-                    className={`text-sm font-medium transition-colors ${
-                      isActive("/accounts")
-                        ? "text-primary"
-                        : "text-gray-600 hover:text-primary"
-                    }`}
+                    className={`nav-link ${isActive("/accounts") ? "active" : ""}`}
                   >
                     Accounts
                   </Link>
                   <Link
                     href="/advisor-team"
-                    className={`text-sm font-medium transition-colors ${
-                      isActive("/advisor-team")
-                        ? "text-primary"
-                        : "text-gray-600 hover:text-primary"
-                    }`}
+                    className={`nav-link ${isActive("/advisor-team") ? "active" : ""}`}
                   >
                     Advisor Team
                   </Link>
                   <Link
-                    href="/wellness-score"
-                    className={`text-sm font-medium transition-colors ${
-                      isActive("/wellness-score")
-                        ? "text-primary"
-                        : "text-gray-600 hover:text-primary"
-                    }`}
-                  >
-                    Wellness Score
-                  </Link>
-                  <Link
                     href="/analysis"
-                    className={`text-sm font-medium transition-colors ${
-                      isActive("/analysis")
-                        ? "text-primary"
-                        : "text-gray-600 hover:text-primary"
-                    }`}
+                    className={`nav-link ${isActive("/analysis") ? "active" : ""}`}
                   >
                     Analysis
                   </Link>
@@ -93,7 +72,7 @@ export default function Layout({ children }: LayoutProps) {
 
               {/* User Section */}
               <div className="flex items-center gap-4">
-                <span className="hidden sm:inline text-sm text-gray-600">
+                <span className="hidden sm:inline text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {user?.firstName || user?.emailAddresses[0]?.emailAddress}
                 </span>
                 <UserButton afterSignOutUrl="/" />
@@ -101,44 +80,28 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             {/* Mobile Navigation */}
-            <div className="md:hidden flex items-center gap-4 pb-3">
+            <div className="md:hidden flex items-center gap-4 pb-3" style={{ paddingTop: '12px' }}>
               <Link
                 href="/dashboard"
-                className={`text-sm font-medium transition-colors ${
-                  isActive("/dashboard")
-                    ? "text-primary"
-                    : "text-gray-600 hover:text-primary"
-                }`}
+                className={`nav-link ${isActive("/dashboard") ? "active" : ""}`}
               >
                 Dashboard
               </Link>
               <Link
                 href="/accounts"
-                className={`text-sm font-medium transition-colors ${
-                  isActive("/accounts")
-                    ? "text-primary"
-                    : "text-gray-600 hover:text-primary"
-                }`}
+                className={`nav-link ${isActive("/accounts") ? "active" : ""}`}
               >
                 Accounts
               </Link>
               <Link
                 href="/advisor-team"
-                className={`text-sm font-medium transition-colors ${
-                  isActive("/advisor-team")
-                    ? "text-primary"
-                    : "text-gray-600 hover:text-primary"
-                }`}
+                className={`nav-link ${isActive("/advisor-team") ? "active" : ""}`}
               >
                 Advisor Team
               </Link>
               <Link
                 href="/analysis"
-                className={`text-sm font-medium transition-colors ${
-                  isActive("/analysis")
-                    ? "text-primary"
-                    : "text-gray-600 hover:text-primary"
-                }`}
+                className={`nav-link ${isActive("/analysis") ? "active" : ""}`}
               >
                 Analysis
               </Link>
@@ -154,20 +117,20 @@ export default function Layout({ children }: LayoutProps) {
         </main>
 
         {/* Footer */}
-        <footer className="bg-white border-t mt-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-gray-700 font-medium mb-2">
+        <footer className="mt-auto">
+          <div className="container" style={{ paddingTop: 'var(--spacing-lg)', paddingBottom: 'var(--spacing-lg)' }}>
+            <div className="disclaimer">
+              <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                 Important Disclaimer
               </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                 This AI-generated advice has not been vetted by a qualified financial advisor and should not be used for trading decisions.
                 For informational purposes only. Always consult with a licensed financial professional before making investment decisions.
               </p>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                © 2025 Samy AI Financial Advisor. Powered by AI agents and built with care.
+            <div className="copyright">
+              <p>
+                © 2025 The Vanguard Group, Inc. All rights reserved. Vanguard Marketing Corporation, Distributor.
               </p>
             </div>
           </div>

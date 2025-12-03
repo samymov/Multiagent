@@ -1,0 +1,492 @@
+/**
+ * Vanguard Corporate Portal Design System
+ * Based on https://investor.vanguard.com/corporate-portal
+ * 
+ * Design Tokens extracted from Vanguard Corporate Portal:
+ * - Typography: System fonts for optimal performance
+ * - Colors: Navy primary (#3C4651), clean neutrals
+ * - Spacing: 8px base unit
+ * - Layout: Clean, professional, accessible structure
+ */
+
+/* ============================================
+   COLOR PALETTE (Vanguard Corporate Portal)
+   ============================================ */
+:root {
+  /* Primary Brand Colors */
+  --vanguard-red: #BA0C2F;           /* Vanguard red - primary brand color */
+  --vanguard-red-dark: #8B0A23;      /* Dark red for headers and emphasis */
+  --vanguard-red-light: #D91E47;     /* Light red for hover states */
+  --vanguard-navy: #BA0C2F;          /* Red used where navy was referenced */
+  --vanguard-navy-dark: #8B0A23;     /* Dark red for headers and emphasis */
+  --vanguard-blue: #BA0C2F;          /* Red for links and highlights (replacing blue) */
+  
+  /* Neutral Palette */
+  --vanguard-white: #FFFFFF;
+  --vanguard-gray-light: #F5F5F5;    /* Light background */
+  --vanguard-gray-medium: #E5E7EB;   /* Borders, dividers */
+  --vanguard-gray-text: #6B7280;     /* Secondary text */
+  --vanguard-gray-dark: #1F2937;     /* Primary text */
+  --vanguard-gray-muted: #9CA3AF;    /* Muted text */
+  
+  /* Accent Colors */
+  --vanguard-yellow: #EDBA75;        /* Accent yellow/gold */
+  --vanguard-yellow-light: #FFF9E6;  /* Light yellow background */
+  
+  /* Semantic Colors */
+  --vanguard-success: #10B981;
+  --vanguard-error: #BA0C2F;          /* Uses Vanguard red */
+  --vanguard-warning: #F59E0B;
+  --vanguard-info: #BA0C2F;  /* Red for info (replacing blue) */
+  
+  /* Background Colors */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --bg-tertiary: #FAFAFA;
+  --bg-navy: #BA0C2F;  /* Red background (replacing navy) */
+  
+  /* Text Colors */
+  --text-primary: #1F2937;            /* Dark gray for primary text */
+  --text-secondary: #6B7280;          /* Medium gray for secondary text */
+  --text-muted: #9CA3AF;              /* Light gray for muted text */
+  --text-inverse: #FFFFFF;            /* White text on dark backgrounds */
+  --text-navy: #BA0C2F;               /* Red for headings and emphasis (replacing navy) */
+  
+  /* Border Colors */
+  --border-light: #E5E7EB;
+  --border-medium: #D1D5DB;
+  --border-dark: #9CA3AF;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+
+/* Font Family Stack - Vanguard uses system fonts */
+:root {
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 
+                   'Helvetica Neue', 'Arial', 'Helvetica', sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
+}
+
+body {
+  font-family: var(--font-primary);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+}
+
+/* Heading Hierarchy - Vanguard Corporate Portal Style */
+h1 {
+  font-size: 2.5rem;        /* 40px */
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--vanguard-red-dark);
+  letter-spacing: -0.01em;
+  margin-bottom: 1rem;
+  font-family: var(--font-primary);
+}
+
+h2 {
+  font-size: 2rem;          /* 32px */
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--vanguard-red);
+  letter-spacing: -0.01em;
+  margin-bottom: 0.875rem;
+  font-family: var(--font-primary);
+}
+
+h3 {
+  font-size: 1.5rem;        /* 24px */
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--vanguard-red);
+  margin-bottom: 0.75rem;
+  font-family: var(--font-primary);
+}
+
+h4 {
+  font-size: 1.25rem;       /* 20px */
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--vanguard-red);
+  margin-bottom: 0.5rem;
+}
+
+h5 {
+  font-size: 1.125rem;      /* 18px */
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--vanguard-red);
+  margin-bottom: 0.5rem;
+}
+
+h6 {
+  font-size: 1rem;          /* 16px */
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--vanguard-red);
+  margin-bottom: 0.5rem;
+}
+
+/* Body Text */
+p {
+  font-size: 1rem;          /* 16px */
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+/* Small Text */
+small,
+.text-sm {
+  font-size: 0.875rem;      /* 14px */
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Large Text */
+.text-lg {
+  font-size: 1.125rem;      /* 18px */
+  line-height: 1.6;
+}
+
+.text-xl {
+  font-size: 1.25rem;       /* 20px */
+  line-height: 1.6;
+}
+
+/* Capitalization Rules */
+.page-title {
+  text-transform: none;     /* Title Case manually applied */
+  font-weight: 700;
+}
+
+.section-heading {
+  text-transform: none;     /* Sentence case */
+  font-weight: 600;
+}
+
+/* ============================================
+   SPACING SYSTEM (8px base unit)
+   ============================================ */
+:root {
+  --spacing-xs: 0.25rem;    /* 4px */
+  --spacing-sm: 0.5rem;     /* 8px */
+  --spacing-md: 1rem;        /* 16px */
+  --spacing-lg: 1.5rem;      /* 24px */
+  --spacing-xl: 2rem;        /* 32px */
+  --spacing-2xl: 3rem;       /* 48px */
+  --spacing-3xl: 4rem;       /* 64px */
+}
+
+/* ============================================
+   LAYOUT STRUCTURE
+   ============================================ */
+
+/* Container */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 var(--spacing-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding: 0 var(--spacing-xl);
+  }
+}
+
+/* Header/Navigation - Vanguard Corporate Portal Style */
+.header {
+  background: var(--vanguard-white);
+  border-bottom: 1px solid var(--border-light);
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.header.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: var(--vanguard-white);
+}
+
+/* Logo */
+.logo {
+  height: 32px;              /* Under 40px as per guidelines */
+  max-height: 40px;
+}
+
+/* Navigation Links - Vanguard Corporate Portal Style */
+.nav-link {
+  font-size: 0.9375rem;      /* 15px */
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  display: inline-block;
+}
+
+.nav-link:hover {
+  color: var(--vanguard-red);
+  text-decoration: none;
+}
+
+.nav-link.active {
+  color: var(--vanguard-red);
+  font-weight: 600;
+  border-bottom-color: var(--vanguard-red);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-primary);
+}
+
+.btn-primary {
+  background-color: var(--vanguard-red);
+  color: var(--vanguard-white);
+  border-color: var(--vanguard-red);
+}
+
+.btn-primary:hover {
+  background-color: var(--vanguard-red-dark);
+  border-color: var(--vanguard-red-dark);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--vanguard-red);
+  border-color: var(--vanguard-red);
+}
+
+.btn-secondary:hover {
+  background-color: var(--vanguard-red);
+  color: var(--vanguard-white);
+}
+
+.btn-red {
+  background-color: var(--vanguard-red);
+  color: var(--vanguard-white);
+  border-color: var(--vanguard-red);
+}
+
+.btn-red:hover {
+  background-color: #8B1425;
+  border-color: #8B1425;
+}
+
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* ============================================
+   CARDS & CONTAINERS
+   ============================================ */
+
+.card {
+  background: var(--vanguard-white);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: var(--spacing-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--vanguard-red);
+  margin: 0;
+}
+
+/* ============================================
+   LINKS
+   ============================================ */
+
+a {
+  color: var(--vanguard-red);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--vanguard-red-light);
+  text-decoration: underline;
+}
+
+a:focus {
+  outline: 2px solid var(--vanguard-red);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Small devices (phones) - up to 600px */
+@media (max-width: 600px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.25rem; }
+  
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+  
+  .btn {
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+  }
+}
+
+/* Medium devices (tablets) - 601px to 900px */
+@media (min-width: 601px) and (max-width: 900px) {
+  .container {
+    padding: 0 var(--spacing-lg);
+  }
+}
+
+/* Large devices (desktops) - 901px and above */
+@media (min-width: 901px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+.font-normal { font-weight: 400; }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mt-3 { margin-top: var(--spacing-lg); }
+.mt-4 { margin-top: var(--spacing-xl); }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+.mb-3 { margin-bottom: var(--spacing-lg); }
+.mb-4 { margin-bottom: var(--spacing-xl); }
+
+.p-0 { padding: 0; }
+.p-1 { padding: var(--spacing-sm); }
+.p-2 { padding: var(--spacing-md); }
+.p-3 { padding: var(--spacing-lg); }
+.p-4 { padding: var(--spacing-xl); }
+
+/* ============================================
+   FOOTER STYLES - Vanguard Corporate Portal
+   ============================================ */
+
+footer {
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
+  padding: var(--spacing-xl) 0;
+  margin-top: auto;
+}
+
+footer .disclaimer {
+  background-color: var(--vanguard-yellow-light);
+  border: 1px solid var(--vanguard-yellow);
+  border-radius: 4px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+footer .copyright {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
+}
+
+/* ============================================
+   ADDITIONAL COMPONENT STYLES
+   ============================================ */
+
+/* Page transitions */
+.page-transition {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus states for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--vanguard-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+

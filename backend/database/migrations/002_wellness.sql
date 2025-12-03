@@ -2,35 +2,14 @@
 -- Version: 002
 -- Description: Add tables for financial wellness assessment
 
--- Wellness questionnaire responses
+-- Wellness questionnaire responses (New format matching Streamlit questions)
 CREATE TABLE IF NOT EXISTS wellness_questionnaire (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     clerk_user_id VARCHAR(255) REFERENCES users(clerk_user_id) ON DELETE CASCADE,
     
-    -- Take Control of Finances
-    monthly_income DECIMAL(12,2),
-    monthly_expenses DECIMAL(12,2),
-    savings_rate DECIMAL(5,2),  -- Percentage
-    has_budget BOOLEAN DEFAULT FALSE,
-    tracks_spending BOOLEAN DEFAULT FALSE,
-    
-    -- Prepare for the Unexpected
-    emergency_fund_months DECIMAL(5,2),
-    has_health_insurance BOOLEAN DEFAULT FALSE,
-    has_life_insurance BOOLEAN DEFAULT FALSE,
-    has_disability_insurance BOOLEAN DEFAULT FALSE,
-    
-    -- Make Progress Toward Goals
-    has_financial_goals BOOLEAN DEFAULT FALSE,
-    goal_types JSONB DEFAULT '[]',  -- Array of goal types
-    goal_timeline VARCHAR(50),  -- 'short', 'medium', 'long', 'very_long'
-    progress_on_goals DECIMAL(5,2),  -- Percentage
-    
-    -- Long-Term Security
-    retirement_account_balance DECIMAL(12,2),
-    retirement_contribution_rate DECIMAL(5,2),  -- Percentage
-    has_retirement_plan BOOLEAN DEFAULT FALSE,
-    years_until_retirement INTEGER,
+    -- Store all questionnaire responses as JSON for flexibility
+    questionnaire_responses JSONB,
+    age INTEGER,  -- Age stored separately for easy access
     
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
@@ -39,20 +18,18 @@ CREATE TABLE IF NOT EXISTS wellness_questionnaire (
     UNIQUE(clerk_user_id)
 );
 
--- Calculated wellness scores
+-- Calculated wellness scores (New format matching Streamlit scoring)
 CREATE TABLE IF NOT EXISTS wellness_scores (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     clerk_user_id VARCHAR(255) REFERENCES users(clerk_user_id) ON DELETE CASCADE,
     questionnaire_id UUID REFERENCES wellness_questionnaire(id) ON DELETE CASCADE,
     
-    -- Overall score
-    overall_score DECIMAL(5,2),
-    
-    -- Individual pillar scores
-    take_control_score DECIMAL(5,2),
-    prepare_unexpected_score DECIMAL(5,2),
-    goals_progress_score DECIMAL(5,2),
-    long_term_security_score DECIMAL(5,2),
+    -- Overall and pillar scores (0-100 scale)
+    overall_score DECIMAL(5,2),  -- Average of all pillar scores
+    take_control_score DECIMAL(5,2),  -- Take Control of Finances pillar
+    prepare_unexpected_score DECIMAL(5,2),  -- Prepare for the Unexpected pillar
+    goals_progress_score DECIMAL(5,2),  -- Make Progress Toward Goals pillar
+    long_term_security_score DECIMAL(5,2),  -- Long-Term Security pillar
     
     -- Pillar details (stored as JSON for flexibility)
     pillar_details JSONB DEFAULT '{}',
