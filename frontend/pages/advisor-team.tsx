@@ -5,6 +5,8 @@ import Layout from '../components/Layout';
 import { API_URL } from '../lib/config';
 import { emitAnalysisCompleted, emitAnalysisFailed, emitAnalysisStarted } from '../lib/events';
 import Head from 'next/head';
+import JourneyStageIndicator from '../components/JourneyStageIndicator';
+import { completeStage, setCurrentStage } from '../lib/journey';
 
 interface Agent {
   icon: string;
@@ -32,33 +34,33 @@ interface AnalysisProgress {
 const agents: Agent[] = [
   {
     icon: '🎯',
-    name: 'Financial Planner',
-    role: 'Orchestrator',
-    description: 'Coordinates your financial analysis',
+    name: 'Goal Planning Agent',
+    role: 'Goal Setting',
+    description: 'Helps you set and achieve your financial goals with personalized strategies',
     color: 'text-ai-accent',
     bgColor: 'bg-ai-accent'
   },
   {
-    icon: '📊',
-    name: 'Portfolio Analyst',
-    role: 'Reporter',
-    description: 'Analyzes your holdings and performance',
+    icon: '🛟',
+    name: 'Emergency Savings Agent',
+    role: 'Savings',
+    description: 'Builds and maintains your emergency fund for financial security',
     color: 'text-primary',
     bgColor: 'bg-primary'
   },
   {
-    icon: '📈',
-    name: 'Chart Specialist',
-    role: 'Charter',
-    description: 'Visualizes your portfolio composition',
+    icon: '💳',
+    name: 'Debt Management Agent',
+    role: 'Debt Reduction',
+    description: 'Creates strategies to reduce and eliminate debt efficiently',
     color: 'text-green-600',
     bgColor: 'bg-green-600'
   },
   {
-    icon: '🎯',
-    name: 'Retirement Planner',
+    icon: '📈',
+    name: 'Retirement Planning Agent',
     role: 'Retirement',
-    description: 'Projects your retirement readiness',
+    description: 'Maximizes your retirement savings and plans for your future',
     color: 'text-accent',
     bgColor: 'bg-accent'
   }
@@ -113,6 +115,10 @@ export default function AdvisorTeam() {
             // Also refresh our own jobs list
             fetchJobs();
 
+            // Mark explore stage as complete and move to act
+            completeStage("explore");
+            setCurrentStage("act");
+            
             setTimeout(() => {
               router.push(`/analysis?job_id=${jobId}`);
             }, 1500);
@@ -206,15 +212,15 @@ export default function AdvisorTeam() {
 
         setProgress({
           stage: 'planner',
-          message: 'Financial Planner coordinating analysis...',
-          activeAgents: ['Financial Planner']
+          message: 'Assessor Agent coordinating analysis...',
+          activeAgents: ['Assessor Agent']
         });
 
         setTimeout(() => {
           setProgress({
             stage: 'parallel',
             message: 'Agents working in parallel...',
-            activeAgents: ['Portfolio Analyst', 'Chart Specialist', 'Retirement Planner']
+            activeAgents: ['Goal Planning Agent', 'Emergency Savings Agent', 'Debt Management Agent', 'Retirement Planning Agent']
           });
         }, 5000);
       } else {
@@ -269,10 +275,13 @@ export default function AdvisorTeam() {
       <Layout>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Journey Stage Indicator */}
+          <JourneyStageIndicator currentStage="explore" />
+          
           <div className="bg-white rounded-lg shadow px-8 py-6 mb-8">
             <h1 className="text-3xl font-bold text-dark mb-2">Your AI Advisory Team</h1>
             <p className="text-gray-600">
-              Meet your team of specialized AI agents that work together to provide comprehensive financial analysis.
+              Meet your team of specialized AI agents that help you achieve your financial goals and build long-term security.
             </p>
           </div>
 

@@ -1,8 +1,10 @@
 import { useUser, UserButton, Protect } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import PageTransition from "./PageTransition";
+import JourneyProgress, { JourneyStage } from "./JourneyProgress";
+import { getJourneyState, setCurrentStage } from "../lib/journey";
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,9 +13,40 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const { user } = useUser();
   const router = useRouter();
+  const [journeyState, setJourneyState] = useState<{ currentStage?: JourneyStage; completedStages?: JourneyStage[] } | null>(null);
 
   // Helper to determine if a link is active
   const isActive = (path: string) => router.pathname === path;
+
+  // Load journey state
+  useEffect(() => {
+    const state = getJourneyState();
+    if (state) {
+      setJourneyState({
+        currentStage: state.currentStage,
+        completedStages: state.completedStages
+      });
+    }
+
+    // Update current stage based on route
+    const path = router.pathname;
+    let stage: JourneyStage | undefined;
+    
+    if (path.includes("wellness-chat") || path.includes("wellness-questionnaire")) {
+      stage = "assess";
+    } else if (path.includes("advisor-team") || path.includes("analysis")) {
+      stage = "explore";
+    } else if (path.includes("agents/") || path.includes("accounts") && !path.includes("/accounts")) {
+      stage = "act";
+    } else if (path === "/dashboard" || path === "/accounts") {
+      stage = "track";
+    }
+
+    if (stage) {
+      setCurrentStage(stage);
+      setJourneyState(prev => ({ ...prev, currentStage: stage }));
+    }
+  }, [router.pathname]);
 
   return (
     <Protect fallback={
@@ -41,19 +74,23 @@ export default function Layout({ children }: LayoutProps) {
                   </span>
                 </Link>
 
+                {/* Journey Progress (Compact) */}
+                <div className="hidden lg:flex items-center flex-1 max-w-2xl mx-8">
+                  <JourneyProgress
+                    currentStage={journeyState?.currentStage}
+                    completedStages={journeyState?.completedStages}
+                    showLabels={true}
+                    compact={true}
+                  />
+                </div>
+
                 {/* Navigation Links */}
-                <div className="hidden md:flex items-center gap-6">
+                <div className="hidden md:flex items-center gap-4">
                   <Link
                     href="/dashboard"
                     className={`nav-link ${isActive("/dashboard") ? "active" : ""}`}
                   >
                     Dashboard
-                  </Link>
-                  <Link
-                    href="/accounts"
-                    className={`nav-link ${isActive("/accounts") ? "active" : ""}`}
-                  >
-                    Accounts
                   </Link>
                   <Link
                     href="/advisor-team"
@@ -80,31 +117,13 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             {/* Mobile Navigation */}
-            <div className="md:hidden flex items-center gap-4 pb-3" style={{ paddingTop: '12px' }}>
-              <Link
-                href="/dashboard"
-                className={`nav-link ${isActive("/dashboard") ? "active" : ""}`}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/accounts"
-                className={`nav-link ${isActive("/accounts") ? "active" : ""}`}
-              >
-                Accounts
-              </Link>
-              <Link
-                href="/advisor-team"
-                className={`nav-link ${isActive("/advisor-team") ? "active" : ""}`}
-              >
-                Advisor Team
-              </Link>
-              <Link
-                href="/analysis"
-                className={`nav-link ${isActive("/analysis") ? "active" : ""}`}
-              >
-                Analysis
-              </Link>
+            <div className="md:hidden pb-3" style={{ paddingTop: '12px' }}>
+              <JourneyProgress
+                currentStage={journeyState?.currentStage}
+                completedStages={journeyState?.completedStages}
+                showLabels={true}
+                compact={true}
+              />
             </div>
           </div>
         </nav>

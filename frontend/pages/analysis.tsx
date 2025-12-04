@@ -11,6 +11,8 @@ import {
 import Layout from '../components/Layout';
 import { API_URL } from '../lib/config';
 import Head from 'next/head';
+import JourneyStageIndicator from '../components/JourneyStageIndicator';
+import { completeStage, setCurrentStage } from '../lib/journey';
 
 interface Job {
   id: string;
@@ -489,6 +491,9 @@ export default function Analysis() {
       <Layout>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Journey Stage Indicator */}
+          <JourneyStageIndicator currentStage="act" />
+          
           {/* Header */}
           <div className="bg-white rounded-lg shadow px-8 py-6 mb-8">
             <div className="flex items-center justify-between">

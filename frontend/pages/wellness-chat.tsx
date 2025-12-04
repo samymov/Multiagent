@@ -6,6 +6,8 @@ import { API_URL } from '../lib/config';
 import { showToast } from '../components/Toast';
 import Head from 'next/head';
 import WellnessScore from '../components/WellnessScore';
+import JourneyStageIndicator from '../components/JourneyStageIndicator';
+import { completeStage, getNextStage, setCurrentStage } from '../lib/journey';
 
 interface Message {
   type: 'agent' | 'user';
@@ -366,6 +368,13 @@ export default function WellnessChat() {
       });
       setShowResults(true);
       
+      // Mark assess stage as complete and move to explore
+      completeStage("assess");
+      const nextStage = getNextStage("assess");
+      if (nextStage) {
+        setCurrentStage(nextStage);
+      }
+      
       addAgentMessage(`Great! I've calculated your financial wellness score. Your overall score is ${result.overall_score.toFixed(1)}/100. Here's your detailed breakdown:`);
       
       showToast('success', 'Assessment completed successfully!');
@@ -444,6 +453,9 @@ export default function WellnessChat() {
       </Head>
       <Layout>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Journey Stage Indicator */}
+          <JourneyStageIndicator currentStage="assess" />
+          
           {!showResults ? (
             <>
               {/* Chat Header */}

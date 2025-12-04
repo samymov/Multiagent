@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Package the Planner Lambda function using Docker for AWS compatibility.
+Package the Assessor Lambda function using Docker for AWS compatibility.
 Uses the official AWS Lambda Python runtime image to ensure binary compatibility.
 """
 
@@ -25,8 +25,8 @@ def package_lambda():
     """Package the Lambda function with all dependencies."""
     
     # Get the directory containing this script
-    planner_dir = Path(__file__).parent.absolute()
-    backend_dir = planner_dir.parent
+    assessor_dir = Path(__file__).parent.absolute()
+    backend_dir = assessor_dir.parent
     project_root = backend_dir.parent
     
     # Create a temporary directory for packaging
@@ -41,7 +41,7 @@ def package_lambda():
         print("Exporting requirements from uv.lock...")
         requirements_result = run_command(
             ["uv", "export", "--no-hashes", "--no-emit-project"],
-            cwd=str(planner_dir)
+            cwd=str(assessor_dir)
         )
 
         # Filter out packages that don't work in Lambda
@@ -73,15 +73,15 @@ def package_lambda():
         run_command(docker_cmd)
         
         # Copy Lambda handler and Python modules
-        shutil.copy(planner_dir / "lambda_handler.py", package_dir)
-        shutil.copy(planner_dir / "agent.py", package_dir)
-        shutil.copy(planner_dir / "templates.py", package_dir)
-        shutil.copy(planner_dir / "market.py", package_dir)
-        shutil.copy(planner_dir / "prices.py", package_dir)
-        shutil.copy(planner_dir / "observability.py", package_dir)
+        shutil.copy(assessor_dir / "lambda_handler.py", package_dir)
+        shutil.copy(assessor_dir / "agent.py", package_dir)
+        shutil.copy(assessor_dir / "templates.py", package_dir)
+        shutil.copy(assessor_dir / "market.py", package_dir)
+        shutil.copy(assessor_dir / "prices.py", package_dir)
+        shutil.copy(assessor_dir / "observability.py", package_dir)
         
         # Create the zip file
-        zip_path = planner_dir / "planner_lambda.zip"
+        zip_path = assessor_dir / "assessor_lambda.zip"
         
         # Remove old zip if it exists
         if zip_path.exists():
@@ -105,7 +105,7 @@ def deploy_lambda(zip_path):
     import boto3
     
     lambda_client = boto3.client('lambda')
-    function_name = 'samy-planner'
+    function_name = 'samy-assessor'
     
     print(f"Deploying to Lambda function: {function_name}")
     
@@ -126,7 +126,7 @@ def deploy_lambda(zip_path):
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description='Package Planner Lambda for deployment')
+    parser = argparse.ArgumentParser(description='Package Assessor Lambda for deployment')
     parser.add_argument('--deploy', action='store_true', help='Deploy to AWS after packaging')
     args = parser.parse_args()
     

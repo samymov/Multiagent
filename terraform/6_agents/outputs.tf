@@ -50,7 +50,7 @@ output "setup_instructions" {
        - /aws/lambda/samy-planner
        - /aws/lambda/samy-tagger
        - /aws/lambda/samy-reporter
-       - /aws/lambda/samy-charter
+       - /aws/lambda/samy-debt-management
        - /aws/lambda/samy-retirement
     
     Bedrock Model: ${var.bedrock_model_id}

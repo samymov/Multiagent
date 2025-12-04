@@ -27,8 +27,9 @@ except ImportError:
 # Import database package
 from src import Database
 
-from templates import RETIREMENT_INSTRUCTIONS
+from templates import RETIREMENT_INSTRUCTIONS, RETIREMENT_PLANNING_INSTRUCTIONS
 from agent import create_agent
+from retirement_planning_agent import create_retirement_planning_agent, RetirementPlanningContext
 from observability import observe
 
 logger = logging.getLogger()
@@ -127,14 +128,138 @@ async def run_retirement_agent(job_id: str, portfolio_data: Dict[str, Any]) -> D
             'final_output': result.final_output
         }
 
+async def process_retirement_question(
+    clerk_user_id: str,
+    question: str,
+    context: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Process a retirement planning question in conversational mode."""
+    try:
+        # Load user data
+        user_data = get_user_preferences_from_id(clerk_user_id)
+        
+        # Load portfolio data if available
+        portfolio_data = {}
+        try:
+            db = Database()
+            accounts = db.accounts.find_by_user(clerk_user_id)
+            portfolio_data = {
+                'accounts': []
+            }
+            for account in accounts:
+                account_data = {
+                    'id': account['id'],
+                    'name': account['account_name'],
+                    'type': account.get('account_type', 'investment'),
+                    'cash_balance': float(account.get('cash_balance', 0)),
+                    'positions': []
+                }
+                positions = db.positions.find_by_account(account['id'])
+                for position in positions:
+                    instrument = db.instruments.find_by_symbol(position['symbol'])
+                    if instrument:
+                        account_data['positions'].append({
+                            'symbol': position['symbol'],
+                            'quantity': float(position.get('quantity', 0)),
+                            'instrument': instrument
+                        })
+                portfolio_data['accounts'].append(account_data)
+        except Exception as e:
+            logger.warning(f"Could not load portfolio data: {e}")
+        
+        # Merge with provided context
+        if context:
+            user_data.update(context)
+        
+        # Create agent
+        model, tools, task, agent_context = create_retirement_planning_agent(
+            clerk_user_id=clerk_user_id,
+            portfolio_data=portfolio_data,
+            user_data=user_data,
+            db=db
+        )
+        
+        # Run agent
+        with trace("Retirement Planning Agent"):
+            agent = Agent[RetirementPlanningContext](
+                name="Retirement Planning Agent",
+                instructions=RETIREMENT_PLANNING_INSTRUCTIONS,
+                model=model,
+                tools=tools
+            )
+            
+            # Format the question as input
+            input_text = f"Client question: {question}\n\nPlease provide a comprehensive answer using the answer_retirement_question tool with any available context."
+            
+            result = await Runner.run(
+                agent,
+                input=input_text,
+                context=agent_context,
+                max_turns=10
+            )
+            
+            return {
+                "success": True,
+                "response": result.final_output,
+                "question": question
+            }
+    
+    except Exception as e:
+        logger.error(f"Error processing retirement question: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e),
+            "question": question
+        }
+
+
+def get_user_preferences_from_id(clerk_user_id: str) -> Dict[str, Any]:
+    """Load user preferences from clerk_user_id."""
+    try:
+        db = Database()
+        user = db.users.find_by_clerk_id(clerk_user_id)
+        if user:
+            target_income = user.get('target_retirement_income')
+            if target_income is None:
+                target_income = 80000
+            else:
+                target_income = float(target_income)
+            
+            return {
+                'years_until_retirement': user.get('years_until_retirement') or 30,
+                'target_retirement_income': target_income,
+                'current_age': 40  # Default, could be loaded from wellness questionnaire
+            }
+    except Exception as e:
+        logger.warning(f"Could not load user data: {e}. Using defaults.")
+    
+    return {
+        'years_until_retirement': 30,
+        'target_retirement_income': 80000.0,
+        'current_age': 40
+    }
+
+
 def lambda_handler(event, context):
     """
-    Lambda handler expecting job_id in event.
+    Lambda handler supporting both orchestration mode and direct question mode.
 
-    Expected event:
+    Orchestration mode (job-based):
     {
         "job_id": "uuid",
         "portfolio_data": {...}  # Optional, will load from DB if not provided
+    }
+    
+    Direct question mode:
+    {
+        "mode": "retirement_planning",
+        "clerk_user_id": "user_xxx",
+        "question": "Am I on track for retirement?",
+        "context": {
+            "current_age": 45,
+            "years_until_retirement": 20,
+            "target_retirement_income": 100000
+        }
     }
     """
     # Wrap entire handler with observability context
@@ -146,11 +271,49 @@ def lambda_handler(event, context):
             if isinstance(event, str):
                 event = json.loads(event)
 
+            # Check if this is direct question mode or orchestration mode
             job_id = event.get('job_id')
+            mode = event.get('mode', 'orchestration')
+            
+            if mode == 'retirement_planning' and not job_id:
+                # Direct question mode
+                clerk_user_id = event.get('clerk_user_id')
+                question = event.get('question')
+                question_context = event.get('context', {})
+                
+                if not clerk_user_id:
+                    return {
+                        'statusCode': 400,
+                        'body': json.dumps({'error': 'clerk_user_id is required for question mode'})
+                    }
+                
+                if not question:
+                    return {
+                        'statusCode': 400,
+                        'body': json.dumps({'error': 'question is required for question mode'})
+                    }
+                
+                logger.info(f"Processing retirement planning question for user {clerk_user_id}: {question}")
+                
+                # Process question
+                result = asyncio.run(process_retirement_question(clerk_user_id, question, question_context))
+                
+                if result.get("success"):
+                    return {
+                        'statusCode': 200,
+                        'body': json.dumps(result)
+                    }
+                else:
+                    return {
+                        'statusCode': 500,
+                        'body': json.dumps(result)
+                    }
+            
+            # Orchestration mode (existing functionality)
             if not job_id:
                 return {
                     'statusCode': 400,
-                    'body': json.dumps({'error': 'job_id is required'})
+                    'body': json.dumps({'error': 'job_id is required for orchestration mode'})
                 }
 
             portfolio_data = event.get('portfolio_data')

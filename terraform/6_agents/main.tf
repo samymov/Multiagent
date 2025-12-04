@@ -350,19 +350,19 @@ resource "aws_lambda_function" "reporter" {
   depends_on = [aws_s3_object.lambda_packages["reporter"]]
 }
 
-# Charter Lambda
-resource "aws_lambda_function" "charter" {
-  function_name = "samy-charter"
+# Debt Management Lambda
+resource "aws_lambda_function" "debt_management" {
+  function_name = "samy-debt-management"
   role          = aws_iam_role.lambda_agents_role.arn
   
   # Using S3 for deployment package (>50MB)
   s3_bucket        = aws_s3_bucket.lambda_packages.id
-  s3_key           = aws_s3_object.lambda_packages["charter"].key
-  source_code_hash = fileexists("${path.module}/../../backend/charter/charter_lambda.zip") ? filebase64sha256("${path.module}/../../backend/charter/charter_lambda.zip") : null
+  s3_key           = aws_s3_object.lambda_packages["debt-management"].key
+  source_code_hash = fileexists("${path.module}/../../backend/debt_management/debt_management_lambda.zip") ? filebase64sha256("${path.module}/../../backend/debt_management/debt_management_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
   runtime     = "python3.12"
-  timeout     = 300  # 5 minutes for charter agent
+  timeout     = 300  # 5 minutes for debt management agent
   memory_size = 1024
   
   environment {
@@ -384,10 +384,10 @@ resource "aws_lambda_function" "charter" {
   tags = {
     Project = "samy"
     Part    = "6"
-    Agent   = "charter"
+    Agent   = "debt-management"
   }
   
-  depends_on = [aws_s3_object.lambda_packages["charter"]]
+  depends_on = [aws_s3_object.lambda_packages["debt-management"]]
 }
 
 # Retirement Lambda

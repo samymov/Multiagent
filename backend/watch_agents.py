@@ -30,7 +30,7 @@ LOG_GROUPS = {
     'PLANNER': '/aws/lambda/samy-planner',
     'TAGGER': '/aws/lambda/samy-tagger',
     'REPORTER': '/aws/lambda/samy-reporter',
-    'CHARTER': '/aws/lambda/samy-charter',
+    'DEBT_MANAGEMENT': '/aws/lambda/samy-debt-management',
     'RETIREMENT': '/aws/lambda/samy-retirement',
 }
 

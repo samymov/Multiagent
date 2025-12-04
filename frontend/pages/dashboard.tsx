@@ -8,6 +8,9 @@ import { Skeleton, SkeletonCard } from "../components/Skeleton";
 import { showToast } from "../components/Toast";
 import Head from "next/head";
 import WellnessScore from "../components/WellnessScore";
+import JourneyProgress from "../components/JourneyProgress";
+import JourneyStageIndicator from "../components/JourneyStageIndicator";
+import { getJourneyState } from "../lib/journey";
 
 interface UserData {
   clerk_user_id: string;
@@ -80,6 +83,7 @@ export default function Dashboard() {
     }>;
   } | null>(null);
   const [wellnessLoading, setWellnessLoading] = useState(true);
+  const [journeyState, setJourneyState] = useState<{ currentStage?: string; completedStages?: string[] } | null>(null);
 
   // Calculate portfolio summary
   const calculatePortfolioSummary = useCallback(() => {
@@ -258,6 +262,17 @@ export default function Dashboard() {
     loadData();
   }, [userLoaded, user, getToken]);
 
+  // Load journey state
+  useEffect(() => {
+    const state = getJourneyState();
+    if (state) {
+      setJourneyState({
+        currentStage: state.currentStage,
+        completedStages: state.completedStages
+      });
+    }
+  }, []);
+
   // Listen for analysis completion events to refresh data
   useEffect(() => {
     if (!userLoaded || !user) return;
@@ -346,7 +361,95 @@ export default function Dashboard() {
       </Head>
       <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Journey Stage Indicator */}
+        <JourneyStageIndicator currentStage="track" />
+        
+        {/* Journey Progress Overview */}
+        <div className="mb-8">
+          <JourneyProgress
+            currentStage={journeyState?.currentStage as any}
+            completedStages={journeyState?.completedStages as any}
+            showLabels={true}
+            compact={false}
+          />
+        </div>
+
         <h1 className="text-3xl font-bold text-dark mb-8">Dashboard</h1>
+
+        {/* AI Advisory Team Section */}
+        <div className="mb-8">
+          <div className="bg-white rounded-lg shadow px-8 py-6 mb-6">
+            <h2 className="text-2xl font-bold text-dark mb-2">Your AI Advisory Team</h2>
+            <p className="text-gray-600">
+              Meet your team of specialized AI agents that help you achieve your financial goals and build long-term security.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: '🎯',
+                name: 'Goal Planning Agent',
+                role: 'Goal Setting',
+                description: 'Helps you set and achieve your financial goals with personalized strategies',
+                color: 'text-ai-accent',
+                bgColor: 'bg-ai-accent',
+                route: '/agents/goal-solver'
+              },
+              {
+                icon: '🛟',
+                name: 'Emergency Savings Agent',
+                role: 'Savings',
+                description: 'Builds and maintains your emergency fund for financial security',
+                color: 'text-primary',
+                bgColor: 'bg-primary',
+                route: '/agents/emergency-savings'
+              },
+              {
+                icon: '💳',
+                name: 'Debt Management Agent',
+                role: 'Debt Reduction',
+                description: 'Creates strategies to reduce and eliminate debt efficiently',
+                color: 'text-green-600',
+                bgColor: 'bg-green-600',
+                route: '/advisor-team' // Debt management agent is accessed through advisor team
+              },
+              {
+                icon: '📈',
+                name: 'Retirement Planning Agent',
+                role: 'Retirement',
+                description: 'Maximizes your retirement savings and plans for your future',
+                color: 'text-accent',
+                bgColor: 'bg-accent',
+                route: '/agents/retirement-planning'
+              }
+            ].map((agent) => (
+              <div
+                key={agent.name}
+                className="bg-white rounded-lg shadow-lg p-6 relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+                onClick={() => router.push(agent.route)}
+              >
+                <div className="relative">
+                  <div className="text-5xl mb-4">{agent.icon}</div>
+                  <h3 className={`text-xl font-semibold mb-1 ${agent.color}`}>
+                    {agent.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-3">{agent.role}</p>
+                  <p className="text-gray-600 text-sm mb-4">{agent.description}</p>
+                  <button
+                    className={`w-full px-4 py-2 rounded-lg text-white font-semibold transition-all ${agent.bgColor} hover:opacity-90`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(agent.route);
+                    }}
+                  >
+                    Get Started
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {loading ? (
           // Loading skeleton

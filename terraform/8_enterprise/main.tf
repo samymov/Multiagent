@@ -181,7 +181,7 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           metrics = [
             ["AWS/Lambda", "Duration", "FunctionName", "samy-planner", { stat = "Average", label = "Planner", id = "m1", color = "#1f77b4" }],
             [".", ".", ".", "samy-reporter", { stat = "Average", label = "Reporter", id = "m2", color = "#2ca02c" }],
-            [".", ".", ".", "samy-charter", { stat = "Average", label = "Charter", id = "m3", color = "#ff7f0e" }],
+            [".", ".", ".", "samy-debt-management", { stat = "Average", label = "Debt Management", id = "m3", color = "#ff7f0e" }],
             [".", ".", ".", "samy-retirement", { stat = "Average", label = "Retirement", id = "m4", color = "#d62728" }],
             [".", ".", ".", "samy-tagger", { stat = "Average", label = "Tagger", id = "m5", color = "#9467bd" }]
           ]
@@ -208,7 +208,7 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           metrics = [
             ["AWS/Lambda", "Errors", "FunctionName", "samy-planner", { stat = "Sum", label = "Planner Errors", id = "e1", color = "#1f77b4" }],
             [".", ".", ".", "samy-reporter", { stat = "Sum", label = "Reporter Errors", id = "e2", color = "#2ca02c" }],
-            [".", ".", ".", "samy-charter", { stat = "Sum", label = "Charter Errors", id = "e3", color = "#ff7f0e" }],
+            [".", ".", ".", "samy-debt-management", { stat = "Sum", label = "Debt Management Errors", id = "e3", color = "#ff7f0e" }],
             [".", ".", ".", "samy-retirement", { stat = "Sum", label = "Retirement Errors", id = "e4", color = "#d62728" }],
             [".", ".", ".", "samy-tagger", { stat = "Sum", label = "Tagger Errors", id = "e5", color = "#9467bd" }]
           ]
@@ -235,7 +235,7 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           metrics = [
             ["AWS/Lambda", "Invocations", "FunctionName", "samy-planner", { stat = "Sum", label = "Planner", id = "i1", color = "#1f77b4" }],
             [".", ".", ".", "samy-reporter", { stat = "Sum", label = "Reporter", id = "i2", color = "#2ca02c" }],
-            [".", ".", ".", "samy-charter", { stat = "Sum", label = "Charter", id = "i3", color = "#ff7f0e" }],
+            [".", ".", ".", "samy-debt-management", { stat = "Sum", label = "Debt Management", id = "i3", color = "#ff7f0e" }],
             [".", ".", ".", "samy-retirement", { stat = "Sum", label = "Retirement", id = "i4", color = "#d62728" }],
             [".", ".", ".", "samy-tagger", { stat = "Sum", label = "Tagger", id = "i5", color = "#9467bd" }]
           ]
@@ -262,7 +262,7 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           metrics = [
             ["AWS/Lambda", "ConcurrentExecutions", "FunctionName", "samy-planner", { stat = "Maximum", label = "Planner", id = "c1", color = "#1f77b4" }],
             [".", ".", ".", "samy-reporter", { stat = "Maximum", label = "Reporter", id = "c2", color = "#2ca02c" }],
-            [".", ".", ".", "samy-charter", { stat = "Maximum", label = "Charter", id = "c3", color = "#ff7f0e" }],
+            [".", ".", ".", "samy-debt-management", { stat = "Maximum", label = "Debt Management", id = "c3", color = "#ff7f0e" }],
             [".", ".", ".", "samy-retirement", { stat = "Maximum", label = "Retirement", id = "c4", color = "#d62728" }],
             [".", ".", ".", "samy-tagger", { stat = "Maximum", label = "Tagger", id = "c5", color = "#9467bd" }]
           ]
@@ -289,7 +289,7 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           metrics = [
             ["AWS/Lambda", "Throttles", "FunctionName", "samy-planner", { stat = "Sum", label = "Planner Throttles", id = "t1", color = "#1f77b4" }],
             [".", ".", ".", "samy-reporter", { stat = "Sum", label = "Reporter Throttles", id = "t2", color = "#2ca02c" }],
-            [".", ".", ".", "samy-charter", { stat = "Sum", label = "Charter Throttles", id = "t3", color = "#ff7f0e" }],
+            [".", ".", ".", "samy-debt-management", { stat = "Sum", label = "Debt Management Throttles", id = "t3", color = "#ff7f0e" }],
             [".", ".", ".", "samy-retirement", { stat = "Sum", label = "Retirement Throttles", id = "t4", color = "#d62728" }],
             [".", ".", ".", "samy-tagger", { stat = "Sum", label = "Tagger Throttles", id = "t5", color = "#9467bd" }]
           ]

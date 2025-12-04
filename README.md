@@ -1,8 +1,8 @@
-# Alex - the Agentic Learning Equities Explainer
+# Samy - the Agentic Learning Equities Explainer
 
 ## Multi-agent Enterprise-Grade SaaS Financial Planner
 
-![Course Image](assets/alex.png)
+![Course Image](assets/samy.png)
 
 _If you're looking at this in Cursor, please right click on the filename in the Explorer on the left, and select "Open preview", to view it in formatted glory._
 
